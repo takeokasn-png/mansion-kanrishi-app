@@ -211,7 +211,7 @@ function showHome() {
 function renderGenreGrid() {
   const grid = document.getElementById('genreGrid');
   grid.innerHTML = '';
-  const icons = ['📋','📖','🏛️','⚖️','🏗️','📜'];
+  const icons = ['📋','📖','🏛️','⚖️','🏗️','📜','🆕'];
   GENRES.forEach((g, i) => {
     const total = g.questions.length;
     const answered = g.questions.filter((_, qi) => state[genKey(g.id, qi)] !== undefined).length;
