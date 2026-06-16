@@ -92,6 +92,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;bac
 .wrong-item-a{font-size:13px;color:var(--primary);font-weight:600;}
 .wrong-item-e{font-size:12px;color:var(--sub);margin-top:4px;line-height:1.5;}
 
+/* ===== 4択ボタン ===== */
+.choice-btn{width:100%;padding:14px 16px;border:2px solid #e0e0e0;border-radius:14px;background:#fff;font-size:14px;line-height:1.5;text-align:left;cursor:pointer;transition:all .15s;box-shadow:0 2px 6px rgba(0,0,0,.06);}
+.choice-btn:active{transform:scale(.98);}
+.choice-btn.correct{background:#e8f5e9;border-color:var(--green);color:var(--green);}
+.choice-btn.wrong{background:#ffebee;border-color:var(--red);color:var(--red);}
+.choice-btn:disabled{cursor:default;}
+
 /* ===== BOTTOM NAV ===== */
 .bottom-nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #e0e0e0;display:flex;padding-bottom:var(--safe-bottom);z-index:50;box-shadow:0 -2px 10px rgba(0,0,0,.08);}
 .nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 0 6px;cursor:pointer;border:none;background:none;color:#9e9e9e;font-size:10px;gap:3px;transition:color .15s;}
@@ -106,7 +113,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;bac
   <div class="home-header">
     <h1>🏢 マンション管理士</h1>
     <p>一問一答 試験対策</p>
-    <div class="total-badge" id="totalBadge">全 565 問</div>
+    <div class="total-badge" id="totalBadge">全 615 問（○×565問＋4択50問）</div>
   </div>
   <div class="genre-grid" id="genreGrid"></div>
   <nav class="bottom-nav">
@@ -136,10 +143,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;bac
   <div class="quiz-body">
     <div class="question-num" id="questionNum"></div>
     <div class="question-card"><div class="question-text" id="questionText"></div></div>
-    <div class="answer-btns">
+    <div class="answer-btns" id="answerBtns">
       <button class="ans-btn maru" onclick="answer(true)">○</button>
       <button class="ans-btn batsu" onclick="answer(false)">×</button>
     </div>
+    <div class="choice-btns" id="choiceBtns" style="display:none;flex-direction:column;gap:10px;width:100%;max-width:500px;"></div>
   </div>
   <div class="result-overlay" id="resultOverlay">
     <div class="result-card">
@@ -211,7 +219,7 @@ function showHome() {
 function renderGenreGrid() {
   const grid = document.getElementById('genreGrid');
   grid.innerHTML = '';
-  const icons = ['📋','📖','🏛️','⚖️','🏗️','📜','🆕'];
+  const icons = ['📋','📖','🏛️','⚖️','🏗️','📜','🆕','📝'];
   GENRES.forEach((g, i) => {
     const total = g.questions.length;
     const answered = g.questions.filter((_, qi) => state[genKey(g.id, qi)] !== undefined).length;
@@ -250,6 +258,10 @@ function startQuiz(genreIdx) {
   renderQuestion();
 }
 
+function is4Choice() {
+  return GENRES[currentGenreIdx].type === '4choice';
+}
+
 function renderQuestion() {
   const g = GENRES[currentGenreIdx];
   const total = currentQuestions.length;
@@ -259,6 +271,66 @@ function renderQuestion() {
   document.getElementById('quizCounter').textContent = `${currentQIdx+1}/${total}`;
   document.getElementById('progressBar').style.width = `${(currentQIdx/total)*100}%`;
   document.getElementById('resultOverlay').classList.remove('show');
+
+  if(is4Choice()) {
+    document.getElementById('answerBtns').style.display = 'none';
+    const cb = document.getElementById('choiceBtns');
+    cb.style.display = 'flex';
+    cb.innerHTML = '';
+    Object.entries(q.choices).forEach(([num, txt]) => {
+      const btn = document.createElement('button');
+      btn.className = 'choice-btn';
+      btn.textContent = num + '. ' + txt;
+      btn.onclick = () => answer4(parseInt(num));
+      cb.appendChild(btn);
+    });
+  } else {
+    document.getElementById('answerBtns').style.display = 'flex';
+    document.getElementById('choiceBtns').style.display = 'none';
+  }
+}
+
+function answer4(userAnswer) {
+  const g = GENRES[currentGenreIdx];
+  const q = currentQuestions[currentQIdx];
+  const correct = userAnswer === q.answer;
+  const btns = document.getElementById('choiceBtns').querySelectorAll('.choice-btn');
+  btns.forEach((btn, i) => {
+    btn.disabled = true;
+    const num = i + 1;
+    if(num === q.answer) btn.classList.add('correct');
+    else if(num === userAnswer && !correct) btn.classList.add('wrong');
+  });
+  showResult4(correct, q);
+}
+
+function showResult4(correct, q) {
+  if(correct) sessionCorrect++; else sessionWrong++;
+  const g = GENRES[currentGenreIdx];
+  const key = genKey(g.id, q.origIdx);
+  state[key] = correct;
+  if(!correct) {
+    if(!state._wrong) state._wrong = {};
+    state._wrong[key] = {gid: g.id, gname: g.name, q: q.q, a: '選択肢' + q.answer, e: q.choices[String(q.answer)] || ''};
+  } else {
+    if(state._wrong) delete state._wrong[key];
+  }
+  saveState();
+
+  const overlay = document.getElementById('resultOverlay');
+  const badge = document.getElementById('resultBadge');
+  const ansText = document.getElementById('resultAnswerText');
+  const expl = document.getElementById('resultExplanation');
+  const nextBtn = document.getElementById('nextBtn');
+
+  badge.textContent = correct ? '✓ 正解！' : '✗ 不正解';
+  badge.className = 'result-badge ' + (correct ? 'correct' : 'wrong');
+  ansText.textContent = `正解: ${q.answer}. ${q.choices[String(q.answer)] || ''}`;
+  expl.textContent = q.explanation || '';
+  expl.style.display = q.explanation ? 'block' : 'none';
+  const isLast = currentQIdx === currentQuestions.length - 1;
+  nextBtn.textContent = isLast ? '結果を見る →' : '次の問題 →';
+  overlay.classList.add('show');
 }
 
 function answer(userAnswer) {
