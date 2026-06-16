@@ -23,13 +23,21 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;bac
 
 /* ===== HOME ===== */
 #homeScreen{background:linear-gradient(160deg,#1a237e 0%,#283593 60%,#1565c0 100%);}
-.home-header{padding:calc(var(--safe-top) + 28px) 20px 20px;text-align:center;color:#fff;}
+.home-header{padding:calc(var(--safe-top) + 28px) 20px 20px;text-align:center;color:#fff;position:relative;}
 .home-header h1{font-size:22px;font-weight:700;letter-spacing:1px;margin-bottom:4px;}
 .home-header p{font-size:13px;opacity:.75;}
 .total-badge{display:inline-block;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:20px;padding:4px 14px;font-size:12px;margin-top:8px;}
+.edit-btn{position:absolute;top:calc(var(--safe-top) + 16px);left:16px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:10px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer;}
+.edit-done-btn{display:none;position:absolute;top:calc(var(--safe-top) + 16px);left:16px;background:#ffd54f;border:none;color:#1a237e;border-radius:10px;padding:7px 14px;font-size:13px;font-weight:700;cursor:pointer;}
 .genre-grid{padding:12px 16px calc(var(--safe-bottom)+80px);display:flex;flex-direction:column;gap:12px;}
-.genre-card{background:#fff;border-radius:16px;padding:16px 18px;display:flex;align-items:center;gap:14px;box-shadow:0 2px 12px rgba(0,0,0,.12);cursor:pointer;transition:transform .1s;}
+.genre-card{background:#fff;border-radius:16px;padding:16px 18px;display:flex;align-items:center;gap:14px;box-shadow:0 2px 12px rgba(0,0,0,.12);cursor:pointer;transition:transform .1s,opacity .2s;}
 .genre-card:active{transform:scale(.97);}
+.genre-card.dragging{opacity:.4;transform:scale(.97);}
+.genre-card.drag-over{border:2px dashed #1a237e;}
+.drag-handle{display:none;color:#bbb;font-size:22px;cursor:grab;padding:0 4px;flex-shrink:0;touch-action:none;}
+.edit-mode .drag-handle{display:flex;align-items:center;}
+.edit-mode .genre-card{cursor:default;}
+.edit-mode .genre-card:active{transform:none;}
 .genre-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
 .genre-info{flex:1;min-width:0;}
 .genre-name{font-size:15px;font-weight:700;color:#1a1a2e;margin-bottom:3px;}
@@ -124,6 +132,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;bac
 <!-- HOME -->
 <div id="homeScreen" class="screen active">
   <div class="home-header">
+    <button class="edit-btn" id="editBtn" onclick="toggleEditMode()">編集</button>
+    <button class="edit-done-btn" id="editDoneBtn" onclick="toggleEditMode()">完了</button>
     <h1>🏢 マンション管理士</h1>
     <p>一問一答 試験対策</p>
     <div class="total-badge">全 615 問（○×565問＋4択50問）</div>
@@ -269,16 +279,25 @@ function showHome() {
 function renderGenreGrid() {
   const grid = document.getElementById('genreGrid');
   grid.innerHTML = '';
+  if(isEditMode) grid.classList.add('edit-mode');
+  else grid.classList.remove('edit-mode');
+
   const icons = ['📋','📖','🏛️','⚖️','🏗️','📜','🆕','📝'];
-  GENRES.forEach((g, i) => {
+  const ordered = getOrderedGenres();
+
+  ordered.forEach((g, orderIdx) => {
+    const realIdx = genreOrder[orderIdx];
     const total = g.questions.length;
     const answered = g.questions.filter((_, qi) => state[genKey(g.id, qi)] !== undefined).length;
     const correct = g.questions.filter((_, qi) => state[genKey(g.id, qi)] === true).length;
     const pct = answered > 0 ? Math.round(correct / answered * 100) : 0;
     const card = document.createElement('div');
     card.className = 'genre-card';
+    card.draggable = isEditMode;
+    card.dataset.orderIdx = orderIdx;
     card.innerHTML = `
-      <div class="genre-icon" style="background:${g.color}20">${icons[i] || '📌'}</div>
+      <div class="drag-handle">☰</div>
+      <div class="genre-icon" style="background:${g.color}20">${icons[realIdx] || '📌'}</div>
       <div class="genre-info">
         <div class="genre-name">${g.name}</div>
         <div class="genre-meta">${answered}/${total}問 完了</div>
@@ -286,7 +305,75 @@ function renderGenreGrid() {
       </div>
       <div class="genre-score" style="color:${g.color}">${answered>0?pct+'%':'--'}</div>
     `;
-    card.onclick = () => startQuiz(i);
+    if(!isEditMode) {
+      card.onclick = () => startQuiz(realIdx);
+    }
+
+    // ドラッグイベント（PC）
+    card.addEventListener('dragstart', e => {
+      dragSrcIdx = orderIdx;
+      card.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    card.addEventListener('dragend', () => card.classList.remove('dragging'));
+    card.addEventListener('dragover', e => { e.preventDefault(); card.classList.add('drag-over'); });
+    card.addEventListener('dragleave', () => card.classList.remove('drag-over'));
+    card.addEventListener('drop', e => {
+      e.preventDefault();
+      card.classList.remove('drag-over');
+      if(dragSrcIdx === null || dragSrcIdx === orderIdx) return;
+      const newOrder = [...genreOrder];
+      const [moved] = newOrder.splice(dragSrcIdx, 1);
+      newOrder.splice(orderIdx, 0, moved);
+      genreOrder = newOrder;
+      saveGenreOrder();
+      renderGenreGrid();
+    });
+
+    // タッチドラッグ（iPhone対応）
+    let touchStartY = 0;
+    let touchCard = null;
+    card.addEventListener('touchstart', e => {
+      if(!isEditMode) return;
+      touchStartY = e.touches[0].clientY;
+      touchCard = card;
+      dragSrcIdx = orderIdx;
+    }, {passive:true});
+    card.addEventListener('touchmove', e => {
+      if(!isEditMode) return;
+      e.preventDefault();
+      const y = e.touches[0].clientY;
+      const cards = [...grid.querySelectorAll('.genre-card')];
+      cards.forEach(c => c.classList.remove('drag-over'));
+      const target = cards.find(c => {
+        const r = c.getBoundingClientRect();
+        return y >= r.top && y <= r.bottom;
+      });
+      if(target && target !== card) target.classList.add('drag-over');
+    }, {passive:false});
+    card.addEventListener('touchend', e => {
+      if(!isEditMode) return;
+      const y = e.changedTouches[0].clientY;
+      const cards = [...grid.querySelectorAll('.genre-card')];
+      cards.forEach(c => c.classList.remove('drag-over'));
+      const targetCard = cards.find(c => {
+        const r = c.getBoundingClientRect();
+        return y >= r.top && y <= r.bottom && c !== card;
+      });
+      if(targetCard) {
+        const destIdx = parseInt(targetCard.dataset.orderIdx);
+        if(destIdx !== dragSrcIdx) {
+          const newOrder = [...genreOrder];
+          const [moved] = newOrder.splice(dragSrcIdx, 1);
+          newOrder.splice(destIdx, 0, moved);
+          genreOrder = newOrder;
+          saveGenreOrder();
+          renderGenreGrid();
+        }
+      }
+      dragSrcIdx = null;
+    });
+
     grid.appendChild(card);
   });
 }
@@ -571,6 +658,37 @@ function resetAll() {
   localStorage.removeItem(STORAGE_KEY);
   state = {};
   updateReviewBadge();
+  renderGenreGrid();
+}
+
+// ===== 並び替え =====
+let genreOrder = loadGenreOrder();
+let isEditMode = false;
+let dragSrcIdx = null;
+
+function loadGenreOrder() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('mgr_genre_order'));
+    if(saved && saved.length === GENRES.length) return saved;
+  } catch(e) {}
+  return GENRES.map((_, i) => i);
+}
+
+function saveGenreOrder() {
+  localStorage.setItem('mgr_genre_order', JSON.stringify(genreOrder));
+}
+
+function getOrderedGenres() {
+  return genreOrder.map(i => GENRES[i]);
+}
+
+function toggleEditMode() {
+  isEditMode = !isEditMode;
+  document.getElementById('editBtn').style.display = isEditMode ? 'none' : 'block';
+  document.getElementById('editDoneBtn').style.display = isEditMode ? 'block' : 'none';
+  const grid = document.getElementById('genreGrid');
+  if(isEditMode) grid.classList.add('edit-mode');
+  else grid.classList.remove('edit-mode');
   renderGenreGrid();
 }
 
