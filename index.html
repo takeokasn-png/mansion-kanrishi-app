@@ -12,13 +12,12 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 :root{
-  --primary:#1a237e;--accent:#ff6f00;--green:#2e7d32;--red:#c62828;
+  --primary:#1a237e;--accent:#ff6f00;--green:#2e7d32;--red:#c62828;--orange:#e65100;
   --card:#fff;--bg:#f0f2f5;--text:#1a1a2e;--sub:#666;
   --safe-top:env(safe-area-inset-top);--safe-bottom:env(safe-area-inset-bottom);
 }
 body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
 
-/* ===== SCREENS ===== */
 .screen{display:none;min-height:100vh;flex-direction:column;}
 .screen.active{display:flex;}
 
@@ -56,15 +55,22 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;bac
 .ans-btn:active{transform:scale(.95);}
 .ans-btn.maru{background:var(--green);color:#fff;}
 .ans-btn.batsu{background:var(--red);color:#fff;}
-.result-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;align-items:flex-end;justify-content:center;padding:0 0 calc(var(--safe-bottom)+20px);}
+
+/* 結果オーバーレイ */
+.result-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;align-items:flex-end;justify-content:center;padding:0 0 calc(var(--safe-bottom)+20px);overflow-y:auto;}
 .result-overlay.show{display:flex;}
-.result-card{background:#fff;border-radius:28px 28px 24px 24px;padding:28px 24px 24px;width:100%;max-width:500px;box-shadow:0 -8px 40px rgba(0,0,0,.2);}
-.result-header{text-align:center;margin-bottom:16px;}
-.result-badge{display:inline-block;border-radius:12px;padding:8px 24px;font-size:20px;font-weight:700;margin-bottom:10px;}
+.result-card{background:#fff;border-radius:28px 28px 24px 24px;padding:24px 20px 20px;width:100%;max-width:500px;box-shadow:0 -8px 40px rgba(0,0,0,.2);}
+.result-header{text-align:center;margin-bottom:12px;}
+.result-badge{display:inline-block;border-radius:12px;padding:8px 24px;font-size:20px;font-weight:700;margin-bottom:8px;}
 .result-badge.correct{background:#e8f5e9;color:var(--green);}
 .result-badge.wrong{background:#ffebee;color:var(--red);}
-.result-explanation{font-size:14px;line-height:1.7;color:#333;background:#f5f5f5;border-radius:12px;padding:14px;margin-bottom:16px;}
-.result-answer-text{font-size:13px;color:var(--sub);text-align:center;margin-bottom:12px;}
+.result-explanation{font-size:14px;line-height:1.7;color:#333;background:#f5f5f5;border-radius:12px;padding:14px;margin-bottom:12px;}
+.result-answer-text{font-size:13px;color:var(--sub);text-align:center;margin-bottom:10px;}
+
+/* 復習チェックボタン */
+.review-check-btn{width:100%;padding:13px;border:2px solid #e0e0e0;border-radius:12px;background:#fff;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:10px;transition:all .15s;color:#555;}
+.review-check-btn.checked{background:#fff3e0;border-color:var(--orange);color:var(--orange);}
+
 .next-btn{width:100%;padding:16px;background:var(--primary);color:#fff;border:none;border-radius:14px;font-size:16px;font-weight:700;cursor:pointer;}
 
 /* ===== RESULT SCREEN ===== */
@@ -83,14 +89,20 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;bac
 .btn-retry{background:#ffd54f;color:#1a237e;}
 .btn-home{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3)!important;}
 
-/* ===== WRONG LIST ===== */
-#wrongScreen{background:var(--bg);}
-.wrong-header{background:var(--primary);color:#fff;padding:calc(var(--safe-top)+12px) 16px 12px;display:flex;align-items:center;gap:10px;}
-.wrong-list{padding:16px;display:flex;flex-direction:column;gap:10px;overflow-y:auto;}
-.wrong-item{background:#fff;border-radius:14px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,.08);}
-.wrong-item-q{font-size:14px;line-height:1.6;margin-bottom:8px;}
-.wrong-item-a{font-size:13px;color:var(--primary);font-weight:600;}
-.wrong-item-e{font-size:12px;color:var(--sub);margin-top:4px;line-height:1.5;}
+/* ===== WRONG / REVIEW LIST ===== */
+#wrongScreen,#reviewScreen{background:var(--bg);}
+.list-header{background:var(--primary);color:#fff;padding:calc(var(--safe-top)+12px) 16px 12px;display:flex;align-items:center;gap:10px;}
+.item-list{padding:16px;display:flex;flex-direction:column;gap:10px;overflow-y:auto;padding-bottom:calc(var(--safe-bottom)+20px);}
+.list-item{background:#fff;border-radius:14px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,.08);}
+.list-item-q{font-size:14px;line-height:1.6;margin-bottom:8px;}
+.list-item-a{font-size:13px;color:var(--primary);font-weight:600;}
+.list-item-e{font-size:12px;color:var(--sub);margin-top:4px;line-height:1.5;}
+.review-del-btn{float:right;background:none;border:1px solid #ccc;border-radius:8px;padding:4px 10px;font-size:12px;color:#888;cursor:pointer;margin-left:8px;}
+
+/* 復習画面のスタート */
+.review-start-bar{padding:12px 16px;background:#fff;border-bottom:1px solid #eee;display:flex;align-items:center;justify-content:space-between;}
+.review-count{font-size:13px;color:var(--sub);}
+.review-start-btn{background:var(--orange);color:#fff;border:none;border-radius:10px;padding:10px 20px;font-size:14px;font-weight:700;cursor:pointer;}
 
 /* ===== 4択ボタン ===== */
 .choice-btn{width:100%;padding:14px 16px;border:2px solid #e0e0e0;border-radius:14px;background:#fff;font-size:14px;line-height:1.5;text-align:left;cursor:pointer;transition:all .15s;box-shadow:0 2px 6px rgba(0,0,0,.06);}
@@ -101,9 +113,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;bac
 
 /* ===== BOTTOM NAV ===== */
 .bottom-nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #e0e0e0;display:flex;padding-bottom:var(--safe-bottom);z-index:50;box-shadow:0 -2px 10px rgba(0,0,0,.08);}
-.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 0 6px;cursor:pointer;border:none;background:none;color:#9e9e9e;font-size:10px;gap:3px;transition:color .15s;}
+.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 0 6px;cursor:pointer;border:none;background:none;color:#9e9e9e;font-size:9px;gap:3px;transition:color .15s;position:relative;}
 .nav-btn.active{color:var(--primary);}
 .nav-btn svg{width:22px;height:22px;}
+.nav-badge{position:absolute;top:6px;right:calc(50% - 18px);background:var(--orange);color:#fff;border-radius:10px;font-size:10px;font-weight:700;padding:1px 5px;min-width:16px;text-align:center;}
 </style>
 </head>
 <body>
@@ -113,13 +126,18 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;bac
   <div class="home-header">
     <h1>🏢 マンション管理士</h1>
     <p>一問一答 試験対策</p>
-    <div class="total-badge" id="totalBadge">全 615 問（○×565問＋4択50問）</div>
+    <div class="total-badge">全 615 問（○×565問＋4択50問）</div>
   </div>
   <div class="genre-grid" id="genreGrid"></div>
   <nav class="bottom-nav">
     <button class="nav-btn active" onclick="showHome()">
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
       ホーム
+    </button>
+    <button class="nav-btn" onclick="showReviewScreen()">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
+      復習問題
+      <span class="nav-badge" id="reviewBadge" style="display:none"></span>
     </button>
     <button class="nav-btn" onclick="showWrongList()">
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
@@ -156,6 +174,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;bac
         <div class="result-answer-text" id="resultAnswerText"></div>
       </div>
       <div class="result-explanation" id="resultExplanation"></div>
+      <button class="review-check-btn" id="reviewCheckBtn" onclick="toggleReview()">☆ 復習リストに追加</button>
       <button class="next-btn" id="nextBtn" onclick="nextQuestion()">次の問題 →</button>
     </div>
   </div>
@@ -175,19 +194,32 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;bac
       <div class="stat-box"><div class="stat-num" id="finalTotal"></div><div class="stat-lbl">出題数</div></div>
     </div>
     <div class="result-btns">
-      <button class="result-btns btn-retry btn-retry" onclick="retryQuiz()">もう一度挑戦</button>
-      <button class="result-btns btn-home" onclick="showHome()">ジャンル選択に戻る</button>
+      <button class="btn-retry" onclick="retryQuiz()">もう一度挑戦</button>
+      <button class="btn-home" onclick="showHome()">ジャンル選択に戻る</button>
     </div>
   </div>
 </div>
 
 <!-- WRONG LIST -->
 <div id="wrongScreen" class="screen">
-  <div class="wrong-header">
+  <div class="list-header">
     <button class="back-btn" onclick="showHome()">＜ 戻る</button>
     <div class="quiz-title">間違えた問題</div>
   </div>
-  <div class="wrong-list" id="wrongList"></div>
+  <div class="item-list" id="wrongList"></div>
+</div>
+
+<!-- REVIEW SCREEN -->
+<div id="reviewScreen" class="screen">
+  <div class="list-header">
+    <button class="back-btn" onclick="showHome()">＜ 戻る</button>
+    <div class="quiz-title">復習問題</div>
+  </div>
+  <div class="review-start-bar">
+    <div class="review-count" id="reviewCount"></div>
+    <button class="review-start-btn" id="reviewStartBtn" onclick="startReviewQuiz()">まとめて解く →</button>
+  </div>
+  <div class="item-list" id="reviewList"></div>
 </div>
 
 <script src="questions.js"></script>
@@ -199,12 +231,29 @@ let currentQuestions = [];
 let currentQIdx = 0;
 let sessionCorrect = 0;
 let sessionWrong = 0;
+let isReviewMode = false;
 
 function loadState() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; } catch(e) { return {}; }
 }
 function saveState() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
 function genKey(gid, qi) { return `${gid}_${qi}`; }
+function reviewKey(gid, qi) { return `rev_${gid}_${qi}`; }
+
+function getReviewList() {
+  return state._review || {};
+}
+
+function updateReviewBadge() {
+  const count = Object.keys(getReviewList()).length;
+  const badge = document.getElementById('reviewBadge');
+  if(count > 0) {
+    badge.textContent = count;
+    badge.style.display = 'block';
+  } else {
+    badge.style.display = 'none';
+  }
+}
 
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -213,6 +262,7 @@ function showScreen(id) {
 
 function showHome() {
   renderGenreGrid();
+  updateReviewBadge();
   showScreen('homeScreen');
 }
 
@@ -228,7 +278,7 @@ function renderGenreGrid() {
     const card = document.createElement('div');
     card.className = 'genre-card';
     card.innerHTML = `
-      <div class="genre-icon" style="background:${g.color}20">${icons[i]}</div>
+      <div class="genre-icon" style="background:${g.color}20">${icons[i] || '📌'}</div>
       <div class="genre-info">
         <div class="genre-name">${g.name}</div>
         <div class="genre-meta">${answered}/${total}問 完了</div>
@@ -242,6 +292,7 @@ function renderGenreGrid() {
 }
 
 function startQuiz(genreIdx) {
+  isReviewMode = false;
   currentGenreIdx = genreIdx;
   const g = GENRES[genreIdx];
   currentQuestions = g.questions.map((q,i) => ({...q, origIdx: i}));
@@ -259,12 +310,41 @@ function startQuiz(genreIdx) {
   renderQuestion();
 }
 
+function startReviewQuiz() {
+  const revItems = Object.values(getReviewList());
+  if(revItems.length === 0) return;
+  isReviewMode = true;
+  currentGenreIdx = -1;
+  currentQuestions = revItems.map((item, i) => ({...item, origIdx: i}));
+  // shuffle
+  for(let i = currentQuestions.length-1; i>0; i--) {
+    const j = Math.floor(Math.random()*(i+1));
+    [currentQuestions[i], currentQuestions[j]] = [currentQuestions[j], currentQuestions[i]];
+  }
+  currentQIdx = 0;
+  sessionCorrect = 0;
+  sessionWrong = 0;
+  document.getElementById('quizTitle').textContent = '復習問題';
+  showScreen('quizScreen');
+  renderQuestion();
+}
+
 function is4Choice() {
-  return GENRES[currentGenreIdx].type === '4choice';
+  if(isReviewMode) {
+    const q = currentQuestions[currentQIdx];
+    return !!q.choices;
+  }
+  return GENRES[currentGenreIdx] && GENRES[currentGenreIdx].type === '4choice';
+}
+
+function getCurrentKey() {
+  const q = currentQuestions[currentQIdx];
+  if(isReviewMode) return q._revKey || '';
+  const g = GENRES[currentGenreIdx];
+  return genKey(g.id, q.origIdx);
 }
 
 function renderQuestion() {
-  const g = GENRES[currentGenreIdx];
   const total = currentQuestions.length;
   const q = currentQuestions[currentQIdx];
   document.getElementById('questionText').textContent = q.q;
@@ -291,8 +371,67 @@ function renderQuestion() {
   }
 }
 
+function showResultOverlay(correct, q) {
+  const badge = document.getElementById('resultBadge');
+  const ansText = document.getElementById('resultAnswerText');
+  const expl = document.getElementById('resultExplanation');
+  const nextBtn = document.getElementById('nextBtn');
+  const revBtn = document.getElementById('reviewCheckBtn');
+
+  badge.textContent = correct ? '✓ 正解！' : '✗ 不正解';
+  badge.className = 'result-badge ' + (correct ? 'correct' : 'wrong');
+
+  if(is4Choice()) {
+    ansText.textContent = `正解: ${q.answer}. ${q.choices[String(q.answer)] || ''}`;
+    expl.textContent = q.explanation || '';
+    expl.style.display = q.explanation ? 'block' : 'none';
+  } else {
+    ansText.textContent = `正解: ${q.a ? '○（正しい）' : '×（誤り）'}`;
+    expl.textContent = q.e || '';
+    expl.style.display = q.e ? 'block' : 'none';
+  }
+
+  // 復習ボタン状態
+  const rkey = isReviewMode ? (q._revKey||'') : getCurrentKey();
+  const inReview = !!(state._review && state._review[rkey]);
+  revBtn.textContent = inReview ? '★ 復習リストに追加済み' : '☆ 復習リストに追加';
+  revBtn.className = 'review-check-btn' + (inReview ? ' checked' : '');
+
+  const isLast = currentQIdx === currentQuestions.length - 1;
+  nextBtn.textContent = isLast ? '結果を見る →' : '次の問題 →';
+  document.getElementById('resultOverlay').classList.add('show');
+}
+
+function toggleReview() {
+  const q = currentQuestions[currentQIdx];
+  const g = isReviewMode ? null : GENRES[currentGenreIdx];
+  const rkey = isReviewMode ? (q._revKey || '') : genKey(g.id, q.origIdx);
+  if(!rkey) return;
+
+  if(!state._review) state._review = {};
+  if(state._review[rkey]) {
+    delete state._review[rkey];
+    document.getElementById('reviewCheckBtn').textContent = '☆ 復習リストに追加';
+    document.getElementById('reviewCheckBtn').className = 'review-check-btn';
+  } else {
+    const item = {
+      _revKey: rkey,
+      q: q.q,
+      a: q.a,
+      e: q.e || '',
+      choices: q.choices || null,
+      answer: q.answer || null,
+      explanation: q.explanation || '',
+    };
+    state._review[rkey] = item;
+    document.getElementById('reviewCheckBtn').textContent = '★ 復習リストに追加済み';
+    document.getElementById('reviewCheckBtn').className = 'review-check-btn checked';
+  }
+  saveState();
+  updateReviewBadge();
+}
+
 function answer4(userAnswer) {
-  const g = GENRES[currentGenreIdx];
   const q = currentQuestions[currentQIdx];
   const correct = userAnswer === q.answer;
   const btns = document.getElementById('choiceBtns').querySelectorAll('.choice-btn');
@@ -302,71 +441,41 @@ function answer4(userAnswer) {
     if(num === q.answer) btn.classList.add('correct');
     else if(num === userAnswer && !correct) btn.classList.add('wrong');
   });
-  showResult4(correct, q);
-}
 
-function showResult4(correct, q) {
   if(correct) sessionCorrect++; else sessionWrong++;
-  const g = GENRES[currentGenreIdx];
-  const key = genKey(g.id, q.origIdx);
-  state[key] = correct;
-  if(!correct) {
-    if(!state._wrong) state._wrong = {};
-    state._wrong[key] = {gid: g.id, gname: g.name, q: q.q, a: '選択肢' + q.answer, e: q.choices[String(q.answer)] || ''};
-  } else {
-    if(state._wrong) delete state._wrong[key];
+  if(!isReviewMode) {
+    const g = GENRES[currentGenreIdx];
+    const key = genKey(g.id, q.origIdx);
+    state[key] = correct;
+    if(!correct) {
+      if(!state._wrong) state._wrong = {};
+      state._wrong[key] = {gid: g.id, gname: g.name, q: q.q, a: '選択肢' + q.answer, e: q.choices[String(q.answer)] || ''};
+    } else {
+      if(state._wrong) delete state._wrong[key];
+    }
+    saveState();
   }
-  saveState();
-
-  const overlay = document.getElementById('resultOverlay');
-  const badge = document.getElementById('resultBadge');
-  const ansText = document.getElementById('resultAnswerText');
-  const expl = document.getElementById('resultExplanation');
-  const nextBtn = document.getElementById('nextBtn');
-
-  badge.textContent = correct ? '✓ 正解！' : '✗ 不正解';
-  badge.className = 'result-badge ' + (correct ? 'correct' : 'wrong');
-  ansText.textContent = `正解: ${q.answer}. ${q.choices[String(q.answer)] || ''}`;
-  expl.textContent = q.explanation || '';
-  expl.style.display = q.explanation ? 'block' : 'none';
-  const isLast = currentQIdx === currentQuestions.length - 1;
-  nextBtn.textContent = isLast ? '結果を見る →' : '次の問題 →';
-  overlay.classList.add('show');
+  showResultOverlay(correct, q);
 }
 
 function answer(userAnswer) {
-  const g = GENRES[currentGenreIdx];
   const q = currentQuestions[currentQIdx];
   const correct = userAnswer === q.a;
   if(correct) sessionCorrect++; else sessionWrong++;
-  const key = genKey(g.id, q.origIdx);
-  state[key] = correct;
-  if(!correct) {
-    if(!state._wrong) state._wrong = {};
-    state._wrong[key] = {gid: g.id, gname: g.name, q: q.q, a: q.a, e: q.e};
-  } else {
-    if(state._wrong) delete state._wrong[key];
-  }
-  saveState();
 
-  const overlay = document.getElementById('resultOverlay');
-  const badge = document.getElementById('resultBadge');
-  const ansText = document.getElementById('resultAnswerText');
-  const expl = document.getElementById('resultExplanation');
-  const nextBtn = document.getElementById('nextBtn');
-
-  if(correct) {
-    badge.textContent = '✓ 正解！';
-    badge.className = 'result-badge correct';
-  } else {
-    badge.textContent = '✗ 不正解';
-    badge.className = 'result-badge wrong';
+  if(!isReviewMode) {
+    const g = GENRES[currentGenreIdx];
+    const key = genKey(g.id, q.origIdx);
+    state[key] = correct;
+    if(!correct) {
+      if(!state._wrong) state._wrong = {};
+      state._wrong[key] = {gid: g.id, gname: g.name, q: q.q, a: q.a, e: q.e};
+    } else {
+      if(state._wrong) delete state._wrong[key];
+    }
+    saveState();
   }
-  ansText.textContent = `正解: ${q.a ? '○（正しい）' : '×（誤り）'}`;
-  expl.textContent = q.e;
-  const isLast = currentQIdx === currentQuestions.length - 1;
-  nextBtn.textContent = isLast ? '結果を見る →' : '次の問題 →';
-  overlay.classList.add('show');
+  showResultOverlay(correct, q);
 }
 
 function nextQuestion() {
@@ -382,7 +491,8 @@ function nextQuestion() {
 function showResult() {
   const total = currentQuestions.length;
   const pct = Math.round(sessionCorrect / total * 100);
-  document.getElementById('finalGenreName').textContent = GENRES[currentGenreIdx].name;
+  const name = isReviewMode ? '復習問題' : GENRES[currentGenreIdx].name;
+  document.getElementById('finalGenreName').textContent = name;
   document.getElementById('finalPct').textContent = pct + '%';
   document.getElementById('finalCorrect').textContent = sessionCorrect;
   document.getElementById('finalWrong').textContent = sessionWrong;
@@ -390,7 +500,10 @@ function showResult() {
   showScreen('resultScreen');
 }
 
-function retryQuiz() { startQuiz(currentGenreIdx); }
+function retryQuiz() {
+  if(isReviewMode) startReviewQuiz();
+  else startQuiz(currentGenreIdx);
+}
 
 function showWrongList() {
   const list = document.getElementById('wrongList');
@@ -402,11 +515,11 @@ function showWrongList() {
   } else {
     items.forEach(item => {
       const div = document.createElement('div');
-      div.className = 'wrong-item';
+      div.className = 'list-item';
       div.innerHTML = `
-        <div class="wrong-item-q">${item.q}</div>
-        <div class="wrong-item-a">正解: ${item.a ? '○（正しい）' : '×（誤り）'}</div>
-        <div class="wrong-item-e">${item.e}</div>
+        <div class="list-item-q">${item.q}</div>
+        <div class="list-item-a">正解: ${item.a === true ? '○（正しい）' : item.a === false ? '×（誤り）' : item.a}</div>
+        <div class="list-item-e">${item.e}</div>
       `;
       list.appendChild(div);
     });
@@ -414,17 +527,57 @@ function showWrongList() {
   showScreen('wrongScreen');
 }
 
+function showReviewScreen() {
+  const revItems = Object.entries(getReviewList());
+  const list = document.getElementById('reviewList');
+  const countEl = document.getElementById('reviewCount');
+  const startBtn = document.getElementById('reviewStartBtn');
+  list.innerHTML = '';
+
+  countEl.textContent = `${revItems.length}問 チェック中`;
+  startBtn.style.display = revItems.length > 0 ? 'block' : 'none';
+
+  if(revItems.length === 0) {
+    list.innerHTML = '<div style="text-align:center;padding:40px;color:#999;font-size:15px;">復習リストは空です<br><br>問題を解いた後、解説画面の<br>「復習リストに追加」から登録できます</div>';
+  } else {
+    revItems.forEach(([rkey, item]) => {
+      const div = document.createElement('div');
+      div.className = 'list-item';
+      const ansLabel = item.choices
+        ? `正解: ${item.answer}. ${item.choices[String(item.answer)] || ''}`
+        : `正解: ${item.a === true ? '○（正しい）' : '×（誤り）'}`;
+      const explText = item.explanation || item.e || '';
+      div.innerHTML = `
+        <button class="review-del-btn" onclick="removeReview('${rkey}')">削除</button>
+        <div class="list-item-q">${item.q}</div>
+        <div class="list-item-a">${ansLabel}</div>
+        ${explText ? `<div class="list-item-e">${explText}</div>` : ''}
+      `;
+      list.appendChild(div);
+    });
+  }
+  showScreen('reviewScreen');
+}
+
+function removeReview(rkey) {
+  if(state._review) delete state._review[rkey];
+  saveState();
+  updateReviewBadge();
+  showReviewScreen();
+}
+
 function resetAll() {
   if(!confirm('全ての学習記録をリセットしますか？')) return;
   localStorage.removeItem(STORAGE_KEY);
   state = {};
+  updateReviewBadge();
   renderGenreGrid();
 }
 
 // Init
 renderGenreGrid();
+updateReviewBadge();
 
-// PWA
 if('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch(()=>{});
 }
