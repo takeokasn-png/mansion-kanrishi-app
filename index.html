@@ -23,12 +23,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;bac
 
 /* ===== HOME ===== */
 #homeScreen{background:linear-gradient(160deg,#1a237e 0%,#283593 60%,#1565c0 100%);}
-.home-header{padding:calc(var(--safe-top) + 28px) 20px 20px;text-align:center;color:#fff;position:relative;}
-.home-header h1{font-size:22px;font-weight:700;letter-spacing:1px;margin-bottom:4px;}
-.home-header p{font-size:13px;opacity:.75;}
-.total-badge{display:inline-block;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:20px;padding:4px 14px;font-size:12px;margin-top:8px;}
-.exam-countdown{margin-top:10px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);border-radius:12px;padding:8px 16px;font-size:12px;color:#fff;line-height:1.6;}
-.exam-countdown .days{font-size:22px;font-weight:bold;color:#FFD54F;}
+.home-header{padding:calc(var(--safe-top) + 14px) 20px 14px;text-align:center;color:#fff;position:relative;}
+.home-header h1{font-size:20px;font-weight:700;letter-spacing:1px;margin-bottom:2px;}
+.home-header p{font-size:12px;opacity:.75;}
+.total-badge{display:inline-block;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:20px;padding:3px 12px;font-size:11px;margin-top:6px;}
+.exam-countdown{margin-top:8px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);border-radius:12px;padding:7px 14px;font-size:12px;color:#fff;display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;}
+.exam-countdown .exam-date{opacity:.85;}
+.exam-countdown .days-wrap{display:flex;align-items:baseline;gap:3px;}
+.exam-countdown .days{font-size:26px;font-weight:bold;color:#FFD54F;line-height:1;}
+.exam-countdown .days-unit{font-size:12px;color:#FFD54F;}
 .edit-btn{position:absolute;top:calc(var(--safe-top) + 16px);right:16px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:10px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer;}
 .edit-done-btn{display:none;position:absolute;top:calc(var(--safe-top) + 16px);right:16px;background:#ffd54f;border:none;color:#1a237e;border-radius:10px;padding:7px 14px;font-size:13px;font-weight:700;cursor:pointer;}
 .genre-grid{padding:12px 16px calc(var(--safe-bottom)+80px);display:flex;flex-direction:column;gap:12px;}
@@ -168,7 +171,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;bac
   <div class="quiz-header">
     <button class="back-btn" onclick="showHome()">＜ 戻る</button>
     <div class="quiz-title" id="quizTitle"></div>
-    <div class="quiz-counter" id="quizCounter"></div>
+    <button class="back-btn" onclick="restartToFirst()" style="font-size:11px;padding:6px 10px;opacity:.85;">1問目</button>
   </div>
   <div class="progress-bar-wrap"><div class="progress-bar-inner" id="progressBar"></div></div>
   <div class="quiz-body">
@@ -281,11 +284,11 @@ function updateCountdown() {
   const el = document.getElementById('examCountdown');
   if(!el) return;
   if(diff > 0) {
-    el.innerHTML = `試験日：2026年11月29日（日）<br>試験まであと <span class="days">${diff}</span> 日`;
+    el.innerHTML = `<span class="exam-date">試験日：2026年11月29日（日）</span><span class="days-wrap">あと <span class="days">${diff}</span><span class="days-unit">日</span></span>`;
   } else if(diff === 0) {
-    el.innerHTML = `試験日：2026年11月29日（日）<br><span class="days">本日試験日！</span>`;
+    el.innerHTML = `<span class="exam-date">試験日：2026年11月29日（日）</span><span class="days" style="font-size:16px">本日試験日！</span>`;
   } else {
-    el.innerHTML = `試験日：2026年11月29日（日）<br>試験終了`;
+    el.innerHTML = `<span class="exam-date">試験日：2026年11月29日（日）</span><span>試験終了</span>`;
   }
 }
 
@@ -398,22 +401,46 @@ function renderGenreGrid() {
   });
 }
 
+function saveSession() {
+  if(isReviewMode) return;
+  const g = GENRES[currentGenreIdx];
+  if(!state._session) state._session = {};
+  state._session[g.id] = {
+    order: currentQuestions.map(q => q.origIdx),
+    qIdx: currentQIdx
+  };
+  saveState();
+}
+
 function startQuiz(genreIdx) {
   isReviewMode = false;
   currentGenreIdx = genreIdx;
   const g = GENRES[genreIdx];
-  currentQuestions = g.questions.map((q,i) => ({...q, origIdx: i}));
-  if(g.type !== '4choice') {
-    for(let i = currentQuestions.length-1; i>0; i--) {
-      const j = Math.floor(Math.random()*(i+1));
-      [currentQuestions[i], currentQuestions[j]] = [currentQuestions[j], currentQuestions[i]];
+  const saved = (state._session || {})[g.id];
+  if(saved && saved.qIdx < g.questions.length) {
+    currentQuestions = saved.order.map(origIdx => ({...g.questions[origIdx], origIdx}));
+    currentQIdx = saved.qIdx;
+  } else {
+    currentQuestions = g.questions.map((q,i) => ({...q, origIdx: i}));
+    if(g.type !== '4choice') {
+      for(let i = currentQuestions.length-1; i>0; i--) {
+        const j = Math.floor(Math.random()*(i+1));
+        [currentQuestions[i], currentQuestions[j]] = [currentQuestions[j], currentQuestions[i]];
+      }
     }
+    currentQIdx = 0;
   }
-  currentQIdx = 0;
   sessionCorrect = 0;
   sessionWrong = 0;
   document.getElementById('quizTitle').textContent = g.name;
   showScreen('quizScreen');
+  renderQuestion();
+}
+
+function restartToFirst() {
+  currentQIdx = 0;
+  saveSession();
+  document.getElementById('resultOverlay').classList.remove('show');
   renderQuestion();
 }
 
@@ -588,9 +615,15 @@ function answer(userAnswer) {
 function nextQuestion() {
   const isLast = currentQIdx === currentQuestions.length - 1;
   if(isLast) {
+    if(!isReviewMode) {
+      if(!state._session) state._session = {};
+      delete state._session[GENRES[currentGenreIdx].id];
+      saveState();
+    }
     showResult();
   } else {
     currentQIdx++;
+    saveSession();
     renderQuestion();
   }
 }
