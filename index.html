@@ -451,15 +451,17 @@ function renderGenreGrid() {
     const answered = Object.keys(curMap).length;
     const correct = Object.values(curMap).filter(v => v === true).length;
     const pct = answered > 0 ? Math.round(correct / answered * 100) : 0;
+    const BALL_COLORS = {'7':'#6D4C41','6':'#388E3C','5':'#E65100','4':'#6A1B9A','3':'#C62828','2':'#1565C0','1':'#F9A825'};
     const kakomonMatch = g.id.match(/^r(\d+)_kakomon$/);
+    const ballColor = kakomonMatch ? (BALL_COLORS[kakomonMatch[1]] || g.color) : g.color;
     const kakomonIconHtml = kakomonMatch
       ? `<div class="genre-icon" style="background:${g.color}20;position:relative;">
-           <span style="font-size:2em;line-height:1;">${icons[realIdx]}</span>
+           <span style="font-size:1.2em;line-height:1;">${icons[realIdx]}</span>
            <span style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:13px;font-weight:900;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.7);pointer-events:none;">${kakomonMatch[1]}</span>
          </div>`
       : `<div class="genre-icon" style="background:${g.color}20">${icons[realIdx] || '📌'}</div>`;
     const hasProgress = laps > 0 || answered > 0;
-    const lapLabel = hasProgress ? `<span style="font-size:10px;font-weight:600;background:${g.color}22;color:${g.color};border-radius:6px;padding:1px 6px;margin-left:5px;">${laps + 1}周目</span>` : '';
+    const lapLabel = hasProgress ? `<span style="font-size:10px;font-weight:600;background:${ballColor}22;color:${ballColor};border-radius:6px;padding:1px 6px;margin-left:5px;">${laps + 1}周目</span>` : '';
     const card = document.createElement('div');
     card.className = 'genre-card';
     card.draggable = isEditMode;
@@ -473,7 +475,7 @@ function renderGenreGrid() {
         <div class="genre-progress"><div class="genre-progress-bar" style="width:${answered/total*100}%;background:${g.color}"></div></div>
       </div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
-        <div class="genre-score" style="color:${g.color}"><span class="genre-score-label">正解率</span>${answered>0?pct+'%':'--'}</div>
+        <div class="genre-score" style="color:${ballColor}"><span class="genre-score-label">正解率</span>${answered>0?pct+'%':'--'}</div>
         ${isEditMode ? `<button class="lap-reset-btn" title="周回リセット">↺ リセット</button>` : ''}
       </div>
     `;
