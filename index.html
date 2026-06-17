@@ -16,6 +16,20 @@
   --card:#fff;--bg:#f0f2f5;--text:#1a1a2e;--sub:#666;
   --safe-top:env(safe-area-inset-top);--safe-bottom:env(safe-area-inset-bottom);
 }
+body.dark-mode{--card:#1e1e1e;--bg:#121212;--text:#e0e0e0;--sub:#aaa;}
+body.dark-mode .genre-card{background:#1e1e1e;border-color:#333;}
+body.dark-mode .genre-name{color:#e0e0e0;}
+body.dark-mode .genre-meta{color:#aaa;}
+body.dark-mode .pass-stats{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.1);}
+body.dark-mode .search-result-item{background:#1e1e1e;border-color:#333;}
+body.dark-mode .search-result-q{color:#e0e0e0;}
+body.dark-mode .list-item{background:#1e1e1e;border-color:#333;color:#e0e0e0;}
+body.dark-mode .wrong-item{background:#1e1e1e;border-color:#333;color:#e0e0e0;}
+body.dark-mode .question-card{background:#1e1e1e;}
+body.dark-mode .question-text{color:#e0e0e0;}
+body.dark-mode .choice-btn{background:#2a2a2a;border-color:#444;color:#e0e0e0;}
+body.dark-mode .review-check-btn{background:#2a2a2a;border-color:#444;color:#ccc;}
+.dark-toggle-btn{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:10px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;margin-top:8px;}
 body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
 
 .screen{display:none;min-height:100vh;flex-direction:column;}
@@ -166,6 +180,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;bac
   <div class="home-header">
     <button class="edit-btn" id="editBtn" onclick="toggleEditMode()">編集</button>
     <button class="edit-done-btn" id="editDoneBtn" onclick="toggleEditMode()">完了</button>
+    <button class="dark-toggle-btn" id="darkToggleBtn" onclick="toggleDarkMode()" style="display:none;position:absolute;top:calc(var(--safe-top) + 50px);right:16px;">🌙 背景を黒に</button>
     <h1>🏢 マンション管理士</h1>
     <p>過去問・一問一答 試験対策</p>
     <div class="total-badge" id="totalBadge"></div>
@@ -963,11 +978,25 @@ function toggleEditMode() {
   isEditMode = !isEditMode;
   document.getElementById('editBtn').style.display = isEditMode ? 'none' : 'block';
   document.getElementById('editDoneBtn').style.display = isEditMode ? 'block' : 'none';
+  document.getElementById('darkToggleBtn').style.display = isEditMode ? 'block' : 'none';
   const grid = document.getElementById('genreGrid');
   if(isEditMode) grid.classList.add('edit-mode');
   else grid.classList.remove('edit-mode');
   renderGenreGrid();
 }
+
+let isDarkMode = localStorage.getItem('mgr_dark_mode') === '1';
+function applyDarkMode() {
+  document.body.classList.toggle('dark-mode', isDarkMode);
+  const btn = document.getElementById('darkToggleBtn');
+  if(btn) btn.textContent = isDarkMode ? '☀️ 背景を白に' : '🌙 背景を黒に';
+}
+function toggleDarkMode() {
+  isDarkMode = !isDarkMode;
+  localStorage.setItem('mgr_dark_mode', isDarkMode ? '1' : '0');
+  applyDarkMode();
+}
+applyDarkMode();
 
 // Init
 renderGenreGrid();
