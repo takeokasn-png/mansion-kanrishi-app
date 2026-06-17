@@ -440,7 +440,7 @@ function renderGenreGrid() {
   if(isEditMode) grid.classList.add('edit-mode');
   else grid.classList.remove('edit-mode');
 
-  const icons = ['R7','R6','R5','R4','R3','R2','R1','🆕','📋','📖','🏛️','⚖️','🏗️','📜'];
+  const icons = ['🟤','🟢','🟠','🟣','🔴','🔵','🟡','🆕','📋','📖','🏛️','⚖️','🏗️','📜'];
   const ordered = getOrderedGenres();
 
   ordered.forEach((g, orderIdx) => {
@@ -451,6 +451,13 @@ function renderGenreGrid() {
     const answered = Object.keys(curMap).length;
     const correct = Object.values(curMap).filter(v => v === true).length;
     const pct = answered > 0 ? Math.round(correct / answered * 100) : 0;
+    const kakomonMatch = g.id.match(/^r(\d+)_kakomon$/);
+    const kakomonIconHtml = kakomonMatch
+      ? `<div class="genre-icon" style="background:${g.color}20;position:relative;">
+           <span style="font-size:2em;line-height:1;">${icons[realIdx]}</span>
+           <span style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:13px;font-weight:900;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.7);pointer-events:none;">${kakomonMatch[1]}</span>
+         </div>`
+      : `<div class="genre-icon" style="background:${g.color}20">${icons[realIdx] || '📌'}</div>`;
     const hasProgress = laps > 0 || answered > 0;
     const lapLabel = hasProgress ? `<span style="font-size:10px;font-weight:600;background:${g.color}22;color:${g.color};border-radius:6px;padding:1px 6px;margin-left:5px;">${laps + 1}周目</span>` : '';
     const card = document.createElement('div');
@@ -459,7 +466,7 @@ function renderGenreGrid() {
     card.dataset.orderIdx = orderIdx;
     card.innerHTML = `
       <div class="drag-handle">☰</div>
-      <div class="genre-icon" style="background:${g.color}20">${icons[realIdx] || '📌'}</div>
+      ${kakomonIconHtml}
       <div class="genre-info">
         <div class="genre-name">${g.name}${lapLabel}</div>
         <div class="genre-meta">${answered}/${total}問 完了</div>
