@@ -851,14 +851,21 @@ let dragSrcIdx = null;
 
 function loadGenreOrder() {
   try {
-    const saved = JSON.parse(localStorage.getItem('mgr_genre_order'));
-    if(saved && saved.length === GENRES.length) return saved;
+    const saved = JSON.parse(localStorage.getItem('mgr_genre_order_v2'));
+    if(saved && Array.isArray(saved)) {
+      // IDベースで復元、存在しないIDは無視、新ジャンルは末尾に追加
+      const savedIds = saved.filter(id => GENRES.findIndex(g => g.id === id) >= 0);
+      const newIds = GENRES.map(g => g.id).filter(id => !savedIds.includes(id));
+      const allIds = [...savedIds, ...newIds];
+      return allIds.map(id => GENRES.findIndex(g => g.id === id));
+    }
   } catch(e) {}
   return GENRES.map((_, i) => i);
 }
 
 function saveGenreOrder() {
-  localStorage.setItem('mgr_genre_order', JSON.stringify(genreOrder));
+  const ids = genreOrder.map(i => GENRES[i].id);
+  localStorage.setItem('mgr_genre_order_v2', JSON.stringify(ids));
 }
 
 function getOrderedGenres() {
