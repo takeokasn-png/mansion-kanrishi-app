@@ -141,8 +141,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;bac
     <button class="edit-btn" id="editBtn" onclick="toggleEditMode()">編集</button>
     <button class="edit-done-btn" id="editDoneBtn" onclick="toggleEditMode()">完了</button>
     <h1>🏢 マンション管理士</h1>
-    <p>一問一答 試験対策</p>
-    <div class="total-badge">全 615 問（○×565問＋4択50問）</div>
+    <p>過去問・一問一答 試験対策</p>
+    <div class="total-badge" id="totalBadge"></div>
     <div class="exam-countdown" id="examCountdown"></div>
   </div>
   <div class="genre-grid" id="genreGrid"></div>
@@ -296,11 +296,18 @@ function updateCountdown() {
   }
 }
 
+function updateTotalBadge() {
+  const kakomenYears = GENRES.filter(g => g.type === '4choice' && g.id.match(/^r\d+_kakomon$/)).length;
+  const oxCount = GENRES.filter(g => g.type !== '4choice').reduce((s,g) => s + g.questions.length, 0);
+  document.getElementById('totalBadge').textContent = `4択50問${kakomenYears}年分＋○×${oxCount}問`;
+}
+
 function showHome() {
   saveSession();
   renderGenreGrid();
   updateReviewBadge();
   updateCountdown();
+  updateTotalBadge();
   showScreen('homeScreen');
 }
 
