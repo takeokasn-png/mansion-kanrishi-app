@@ -545,7 +545,11 @@ function startQuiz(genreIdx) {
   currentGenreIdx = genreIdx;
   const g = GENRES[genreIdx];
   const saved = (state._session || {})[g.id];
-  if(saved && saved.qIdx < g.questions.length) {
+  const validSaved = saved && Array.isArray(saved.order)
+    && saved.order.length === g.questions.length
+    && saved.order.every(i => g.questions[i] && g.questions[i].q)
+    && typeof saved.qIdx === 'number' && saved.qIdx >= 0 && saved.qIdx < g.questions.length;
+  if(validSaved) {
     currentQuestions = saved.order.map(origIdx => ({...g.questions[origIdx], origIdx}));
     currentQIdx = saved.qIdx;
   } else {
@@ -610,7 +614,8 @@ function renderQuestion() {
   const total = currentQuestions.length;
   const q = currentQuestions[currentQIdx];
   const qEl = document.getElementById('questionText');
-  const formatted = q.q.replace(/\s*([アイウエオ])\s+/g, '\n$1 ');
+  const qtext = (q && q.q) ? q.q : '';
+  const formatted = qtext.replace(/\s*([アイウエオ])\s+/g, '\n$1 ');
   qEl.innerText = formatted;
   document.getElementById('questionNum').textContent = `第 ${currentQIdx+1} 問`;
   document.getElementById('quizCounter').textContent = `${currentQIdx+1}/${total}`;
