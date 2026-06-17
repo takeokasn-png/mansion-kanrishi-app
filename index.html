@@ -439,9 +439,12 @@ function renderGenreGrid() {
   ordered.forEach((g, orderIdx) => {
     const realIdx = genreOrder[orderIdx];
     const total = g.questions.length;
-    const answered = g.questions.filter((_, qi) => state[genKey(g.id, qi)] !== undefined).length;
-    const correct = g.questions.filter((_, qi) => state[genKey(g.id, qi)] === true).length;
+    const laps = (state._laps && state._laps[g.id]) || 0;
+    const curMap = (state._cur && state._cur[g.id]) || {};
+    const answered = Object.keys(curMap).length;
+    const correct = Object.values(curMap).filter(v => v === true).length;
     const pct = answered > 0 ? Math.round(correct / answered * 100) : 0;
+    const lapLabel = (laps > 0 || answered > 0) ? `<span style="font-size:10px;font-weight:600;background:${g.color}22;color:${g.color};border-radius:6px;padding:1px 6px;margin-left:5px;">${laps + 1}周目</span>` : '';
     const card = document.createElement('div');
     card.className = 'genre-card';
     card.draggable = isEditMode;
@@ -450,7 +453,7 @@ function renderGenreGrid() {
       <div class="drag-handle">☰</div>
       <div class="genre-icon" style="background:${g.color}20">${icons[realIdx] || '📌'}</div>
       <div class="genre-info">
-        <div class="genre-name">${g.name}</div>
+        <div class="genre-name">${g.name}${lapLabel}</div>
         <div class="genre-meta">${answered}/${total}問 完了</div>
         <div class="genre-progress"><div class="genre-progress-bar" style="width:${answered/total*100}%;background:${g.color}"></div></div>
       </div>
@@ -716,6 +719,9 @@ function answer4(userAnswer) {
     const g = GENRES[currentGenreIdx];
     const key = genKey(g.id, q.origIdx);
     state[key] = correct;
+    if(!state._cur) state._cur = {};
+    if(!state._cur[g.id]) state._cur[g.id] = {};
+    state._cur[g.id][q.origIdx] = correct;
     if(!correct) {
       if(!state._wrong) state._wrong = {};
       state._wrong[key] = {gid: g.id, gname: g.name, q: q.q, a: '選択肢' + q.answer, e: q.choices[String(q.answer)] || ''};
@@ -736,6 +742,9 @@ function answer(userAnswer) {
     const g = GENRES[currentGenreIdx];
     const key = genKey(g.id, q.origIdx);
     state[key] = correct;
+    if(!state._cur) state._cur = {};
+    if(!state._cur[g.id]) state._cur[g.id] = {};
+    state._cur[g.id][q.origIdx] = correct;
     if(!correct) {
       if(!state._wrong) state._wrong = {};
       state._wrong[key] = {gid: g.id, gname: g.name, q: q.q, a: q.a, e: q.e};
@@ -751,8 +760,12 @@ function nextQuestion() {
   const isLast = currentQIdx === currentQuestions.length - 1;
   if(isLast) {
     if(!isReviewMode) {
+      const gid = GENRES[currentGenreIdx].id;
       if(!state._session) state._session = {};
-      delete state._session[GENRES[currentGenreIdx].id];
+      delete state._session[gid];
+      if(!state._laps) state._laps = {};
+      state._laps[gid] = ((state._laps[gid]) || 0) + 1;
+      if(state._cur) delete state._cur[gid];
       saveState();
     }
     showResult();
