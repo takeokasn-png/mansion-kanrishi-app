@@ -154,14 +154,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;bac
   </div>
   <div class="genre-grid" id="genreGrid"></div>
   <div class="pass-stats">
-    <div class="pass-stats-title">📊 過去5年間の合格実績</div>
+    <div class="pass-stats-title">📊 過去7年間の合格実績</div>
     <table class="pass-stats-table">
       <tr><th>年度</th><th>受験者数</th><th>合格者数</th><th>合格率</th></tr>
+      <tr><td>R7</td><td>10,984名</td><td>1,210名</td><td class="pct">11.0%</td></tr>
       <tr><td>R6</td><td>12,489名</td><td>1,286名</td><td class="pct">10.3%</td></tr>
       <tr><td>R5</td><td>13,762名</td><td>1,125名</td><td class="pct">8.2%</td></tr>
       <tr><td>R4</td><td>12,695名</td><td>1,402名</td><td class="pct">11.0%</td></tr>
       <tr><td>R3</td><td>12,520名</td><td>1,238名</td><td class="pct">10.0%</td></tr>
       <tr><td>R2</td><td>12,198名</td><td>1,045名</td><td class="pct">8.6%</td></tr>
+      <tr><td>R1</td><td>12,021名</td><td>991名</td><td class="pct">8.2%</td></tr>
     </table>
   </div>
   <div style="height:2.5cm;"></div>
@@ -336,7 +338,7 @@ function renderGenreGrid() {
   if(isEditMode) grid.classList.add('edit-mode');
   else grid.classList.remove('edit-mode');
 
-  const icons = ['📝','📄','📃','🗒️','🆕','📋','📖','🏛️','⚖️','🏗️','📜'];
+  const icons = ['R7','R6','R5','R4','R3','🆕','📋','📖','🏛️','⚖️','🏗️','📜'];
   const ordered = getOrderedGenres();
 
   ordered.forEach((g, orderIdx) => {
@@ -512,7 +514,9 @@ function getCurrentKey() {
 function renderQuestion() {
   const total = currentQuestions.length;
   const q = currentQuestions[currentQIdx];
-  document.getElementById('questionText').textContent = q.q;
+  const qEl = document.getElementById('questionText');
+  const formatted = q.q.replace(/\s*([アイウエオ])\s+/g, '\n$1 ');
+  qEl.innerText = formatted;
   document.getElementById('questionNum').textContent = `第 ${currentQIdx+1} 問`;
   document.getElementById('quizCounter').textContent = `${currentQIdx+1}/${total}`;
   document.getElementById('progressBar').style.width = `${(currentQIdx/total)*100}%`;
