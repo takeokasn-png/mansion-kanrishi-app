@@ -1,5 +1,11 @@
-const CACHE_NAME = 'mansionkanrishi-v1';
-const ASSETS = ['/', '/index.html', '/questions.js', '/manifest.json', '/icon.svg'];
+const CACHE_NAME = 'mansionkanrishi-v3';
+const ASSETS = [
+  '/mansion-kanrishi-app/',
+  '/mansion-kanrishi-app/index.html',
+  '/mansion-kanrishi-app/questions.js',
+  '/mansion-kanrishi-app/manifest.json',
+  '/mansion-kanrishi-app/icon.svg'
+];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(ASSETS)));
