@@ -918,13 +918,23 @@ let isEditMode = false;
 let dragSrcIdx = null;
 
 function loadGenreOrder() {
+  // 過去問ジャンル(r\d+_kakomon)は常に年度降順で先頭に固定
+  const kakomonIds = GENRES
+    .map(g => g.id)
+    .filter(id => /^r\d+_kakomon$/.test(id))
+    .sort((a, b) => {
+      const ya = parseInt(a.match(/\d+/)[0]);
+      const yb = parseInt(b.match(/\d+/)[0]);
+      return yb - ya;
+    });
   try {
     const saved = JSON.parse(localStorage.getItem('mgr_genre_order_v2'));
     if(saved && Array.isArray(saved)) {
-      // IDベースで復元、存在しないIDは無視、新ジャンルは末尾に追加
       const savedIds = saved.filter(id => GENRES.findIndex(g => g.id === id) >= 0);
-      const newIds = GENRES.map(g => g.id).filter(id => !savedIds.includes(id));
-      const allIds = [...savedIds, ...newIds];
+      // 非過去問の保存順を復元（過去問は除外）
+      const nonKakomonSaved = savedIds.filter(id => !/^r\d+_kakomon$/.test(id));
+      const newNonKakomon = GENRES.map(g => g.id).filter(id => !/^r\d+_kakomon$/.test(id) && !nonKakomonSaved.includes(id));
+      const allIds = [...kakomonIds, ...nonKakomonSaved, ...newNonKakomon];
       return allIds.map(id => GENRES.findIndex(g => g.id === id));
     }
   } catch(e) {}
