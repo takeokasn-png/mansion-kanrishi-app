@@ -168,7 +168,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;bac
     <div class="exam-countdown" id="examCountdown"></div>
   </div>
   <div class="search-bar">
-    <input class="search-input" id="searchInput" type="search" placeholder="🔍 キーワード検索..." oninput="onSearchInput()" />
+    <input class="search-input" id="searchInput" type="search" placeholder="🔍 キーワード検索..." oninput="onSearchInput()" oncompositionend="onSearchCompositionEnd()" onkeydown="if(event.key==='Enter'&&!_isComposing){const k=this.value.trim();if(k)doSearch(k);}" />
     <button class="search-clear" id="searchClear" onclick="clearSearch()">✕</button>
   </div>
   <div class="genre-grid" id="genreGrid"></div>
@@ -329,10 +329,18 @@ function showScreen(id) {
   document.getElementById(id).classList.add('active');
 }
 
+let _isComposing = false;
+document.addEventListener('compositionstart', () => _isComposing = true);
+document.addEventListener('compositionend', () => { _isComposing = false; });
+
 function onSearchInput() {
   const kw = document.getElementById('searchInput').value.trim();
   document.getElementById('searchClear').style.display = kw ? 'block' : 'none';
-  if(kw.length < 2) return;
+}
+
+function onSearchCompositionEnd() {
+  const kw = document.getElementById('searchInput').value.trim();
+  if(kw.length < 1) return;
   doSearch(kw);
 }
 
