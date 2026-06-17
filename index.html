@@ -56,7 +56,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;bac
 .genre-meta{font-size:12px;color:#888;}
 .genre-progress{width:100%;height:4px;background:#e8eaf6;border-radius:2px;margin-top:8px;overflow:hidden;}
 .genre-progress-bar{height:100%;border-radius:2px;transition:width .4s;}
-.genre-score{font-size:12px;font-weight:700;margin-left:auto;flex-shrink:0;text-align:center;}
+.genre-score{font-size:12px;font-weight:700;text-align:center;}
+.lap-reset-btn{background:none;border:1px solid #ddd;border-radius:8px;padding:2px 7px;font-size:10px;color:#999;cursor:pointer;white-space:nowrap;}
 .genre-score-label{font-size:9px;font-weight:400;color:#999;display:block;margin-bottom:1px;}
 
 /* ===== QUIZ ===== */
@@ -444,7 +445,8 @@ function renderGenreGrid() {
     const answered = Object.keys(curMap).length;
     const correct = Object.values(curMap).filter(v => v === true).length;
     const pct = answered > 0 ? Math.round(correct / answered * 100) : 0;
-    const lapLabel = (laps > 0 || answered > 0) ? `<span style="font-size:10px;font-weight:600;background:${g.color}22;color:${g.color};border-radius:6px;padding:1px 6px;margin-left:5px;">${laps + 1}周目</span>` : '';
+    const hasProgress = laps > 0 || answered > 0;
+    const lapLabel = hasProgress ? `<span style="font-size:10px;font-weight:600;background:${g.color}22;color:${g.color};border-radius:6px;padding:1px 6px;margin-left:5px;">${laps + 1}周目</span>` : '';
     const card = document.createElement('div');
     card.className = 'genre-card';
     card.draggable = isEditMode;
@@ -457,10 +459,24 @@ function renderGenreGrid() {
         <div class="genre-meta">${answered}/${total}問 完了</div>
         <div class="genre-progress"><div class="genre-progress-bar" style="width:${answered/total*100}%;background:${g.color}"></div></div>
       </div>
-      <div class="genre-score" style="color:${g.color}"><span class="genre-score-label">正解率</span>${answered>0?pct+'%':'--'}</div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+        <div class="genre-score" style="color:${g.color}"><span class="genre-score-label">正解率</span>${answered>0?pct+'%':'--'}</div>
+        ${isEditMode ? `<button class="lap-reset-btn" title="周回リセット">↺ リセット</button>` : ''}
+      </div>
     `;
     if(!isEditMode) {
       card.onclick = () => startQuiz(realIdx);
+    }
+    if(isEditMode) {
+      card.querySelector('.lap-reset-btn').addEventListener('click', e => {
+        e.stopPropagation();
+        if(!confirm(`「${g.name}」の周回・進捗をリセットしますか？`)) return;
+        if(state._laps) delete state._laps[g.id];
+        if(state._cur) delete state._cur[g.id];
+        if(state._session) delete state._session[g.id];
+        saveState();
+        renderGenreGrid();
+      });
     }
 
     // ドラッグイベント（PC）
@@ -534,7 +550,10 @@ function renderGenreGrid() {
 
 function saveSession() {
   if(isReviewMode) return;
+  if(currentGenreIdx < 0 || currentGenreIdx >= GENRES.length) return;
   const g = GENRES[currentGenreIdx];
+  // 最終問題まで完了していたら保存しない（次周は1問目から）
+  if(currentQIdx >= currentQuestions.length - 1 && currentQuestions.length === g.questions.length) return;
   if(!state._session) state._session = {};
   state._session[g.id] = {
     order: currentQuestions.map(q => q.origIdx),
