@@ -70,6 +70,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;bac
 .progress-bar-inner{height:100%;background:#ffd54f;transition:width .3s;}
 .quiz-body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:20px 16px calc(var(--safe-bottom)+20px);gap:16px;}
 .question-num{font-size:12px;color:var(--sub);font-weight:600;}
+.lap-badge{font-size:10px;font-weight:700;border-radius:5px;padding:1px 5px;white-space:nowrap;}
+.lap-badge.ok{background:#e8f5e9;color:#2e7d32;}
+.lap-badge.ng{background:#fce4ec;color:#c62828;}
 .question-card{background:#fff;border-radius:20px;padding:28px 22px;box-shadow:0 4px 20px rgba(0,0,0,.1);width:100%;max-width:500px;}
 .question-text{font-size:17px;line-height:1.7;font-weight:500;color:var(--text);}
 .answer-btns{display:flex;gap:14px;width:100%;max-width:500px;}
@@ -220,7 +223,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;bac
   </div>
   <div class="progress-bar-wrap"><div class="progress-bar-inner" id="progressBar"></div></div>
   <div class="quiz-body">
-    <div class="question-num" id="questionNum"></div>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+      <div class="question-num" id="questionNum"></div>
+      <div id="lapHistory" style="display:flex;gap:4px;flex-wrap:wrap;"></div>
+    </div>
     <div class="question-card"><div class="question-text" id="questionText"></div></div>
     <div class="answer-btns" id="answerBtns">
       <button class="ans-btn maru" onclick="answer(true)">○</button>
@@ -474,6 +480,7 @@ function renderGenreGrid() {
         if(state._laps) delete state._laps[g.id];
         if(state._cur) delete state._cur[g.id];
         if(state._session) delete state._session[g.id];
+        if(state._history) delete state._history[g.id];
         saveState();
         renderGenreGrid();
       });
@@ -644,6 +651,20 @@ function renderQuestion() {
   document.getElementById('progressBar').style.width = `${(currentQIdx/total)*100}%`;
   document.getElementById('resultOverlay').classList.remove('show');
 
+  // 過去周回の正誤履歴バッジ
+  const lapHistEl = document.getElementById('lapHistory');
+  lapHistEl.innerHTML = '';
+  if(!isReviewMode && currentGenreIdx >= 0) {
+    const g = GENRES[currentGenreIdx];
+    const hist = (state._history && state._history[g.id] && state._history[g.id][q.origIdx]) || [];
+    hist.forEach((ok, i) => {
+      const span = document.createElement('span');
+      span.className = 'lap-badge ' + (ok ? 'ok' : 'ng');
+      span.textContent = `${i+1}周${ok ? '○' : '×'}`;
+      lapHistEl.appendChild(span);
+    });
+  }
+
   if(is4Choice()) {
     document.getElementById('answerBtns').style.display = 'none';
     const cb = document.getElementById('choiceBtns');
@@ -741,6 +762,11 @@ function answer4(userAnswer) {
     if(!state._cur) state._cur = {};
     if(!state._cur[g.id]) state._cur[g.id] = {};
     state._cur[g.id][q.origIdx] = correct;
+    const lapNum = (state._laps && state._laps[g.id]) || 0;
+    if(!state._history) state._history = {};
+    if(!state._history[g.id]) state._history[g.id] = {};
+    if(!state._history[g.id][q.origIdx]) state._history[g.id][q.origIdx] = [];
+    state._history[g.id][q.origIdx][lapNum] = correct;
     if(!correct) {
       if(!state._wrong) state._wrong = {};
       state._wrong[key] = {gid: g.id, gname: g.name, q: q.q, a: '選択肢' + q.answer, e: q.choices[String(q.answer)] || ''};
@@ -764,6 +790,11 @@ function answer(userAnswer) {
     if(!state._cur) state._cur = {};
     if(!state._cur[g.id]) state._cur[g.id] = {};
     state._cur[g.id][q.origIdx] = correct;
+    const lapNum = (state._laps && state._laps[g.id]) || 0;
+    if(!state._history) state._history = {};
+    if(!state._history[g.id]) state._history[g.id] = {};
+    if(!state._history[g.id][q.origIdx]) state._history[g.id][q.origIdx] = [];
+    state._history[g.id][q.origIdx][lapNum] = correct;
     if(!correct) {
       if(!state._wrong) state._wrong = {};
       state._wrong[key] = {gid: g.id, gname: g.name, q: q.q, a: q.a, e: q.e};
