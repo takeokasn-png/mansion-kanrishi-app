@@ -634,7 +634,8 @@ function saveSession() {
   if(!state._session) state._session = {};
   state._session[g.id] = {
     order: currentQuestions.map(q => q.origIdx),
-    qIdx: currentQIdx
+    qIdx: currentQIdx,
+    log: sessionLog
   };
   saveState();
 }
@@ -651,6 +652,7 @@ function startQuiz(genreIdx) {
   if(validSaved) {
     currentQuestions = saved.order.map(origIdx => ({...g.questions[origIdx], origIdx}));
     currentQIdx = saved.qIdx;
+    sessionLog = Array.isArray(saved.log) ? saved.log : [];
   } else {
     currentQuestions = g.questions.map((q,i) => ({...q, origIdx: i}));
     if(g.type !== '4choice') {
@@ -660,10 +662,10 @@ function startQuiz(genreIdx) {
       }
     }
     currentQIdx = 0;
+    sessionLog = [];
   }
-  sessionCorrect = 0;
-  sessionWrong = 0;
-  sessionLog = [];
+  sessionCorrect = sessionLog.filter(x => x.correct).length;
+  sessionWrong = sessionLog.length - sessionCorrect;
   document.getElementById('quizTitle').textContent = g.name;
   showScreen('quizScreen');
   renderQuestion();
