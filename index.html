@@ -130,18 +130,30 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;bac
 
 .result-circle{cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:rgba(255,255,255,.2);}
 .result-circle:active{opacity:.8;}
-/* ===== SESSION LOG (inline on result screen) ===== */
-#resultScreen{overflow-y:auto;}
-.result-screen-body{justify-content:flex-start!important;padding-top:calc(var(--safe-top)+32px);}
-.session-log-section{width:100%;background:rgba(255,255,255,.1);border-radius:16px;overflow:hidden;display:none;}
-.session-log-section.show{display:block;}
-.session-log-section-title{font-size:14px;font-weight:700;color:rgba(255,255,255,.7);padding:12px 16px 8px;letter-spacing:.05em;}
-.session-log-item{display:flex;align-items:center;gap:10px;padding:10px 16px;border-top:1px solid rgba(255,255,255,.1);}
+
+/* 正解率アイコン（クイズヘッダー） */
+.rate-icon{display:flex;align-items:center;gap:4px;background:rgba(255,255,255,.18);border:1.5px solid rgba(255,255,255,.55);color:#fff;border-radius:999px;padding:5px 11px 5px 9px;font-size:12px;font-weight:700;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;line-height:1;}
+.rate-icon:active{opacity:.65;}
+.rate-icon svg{width:14px;height:14px;flex-shrink:0;}
+
+/* ===== SESSION LOG OVERLAY (bottom sheet) ===== */
+.session-log-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:150;align-items:flex-end;justify-content:center;}
+.session-log-overlay.show{display:flex;}
+.session-log-card{background:#fff;border-radius:24px 24px 0 0;width:100%;max-width:500px;max-height:82vh;display:flex;flex-direction:column;}
+.session-log-head{display:flex;align-items:center;justify-content:space-between;padding:16px 20px 10px;border-bottom:1px solid #eee;}
+.session-log-head h3{margin:0;font-size:16px;font-weight:700;color:#222;}
+.session-log-x{background:none;border:none;font-size:20px;color:#999;cursor:pointer;padding:4px 10px;line-height:1;}
+.session-log-summary{padding:10px 20px;font-size:13px;color:#666;border-bottom:1px solid #f2f2f2;display:flex;gap:14px;}
+.session-log-summary b{color:#222;}
+.session-log-body{overflow-y:auto;padding:4px 16px calc(var(--safe-bottom)+16px);}
+.session-log-empty{text-align:center;color:#999;padding:24px;font-size:14px;}
+.session-log-item{display:flex;align-items:center;gap:10px;padding:11px 4px;border-bottom:1px solid #f2f2f2;}
+.session-log-item:last-child{border-bottom:none;}
 .session-log-badge{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0;}
-.session-log-badge.ok{background:#e8f5e9;color:#388e3c;}
-.session-log-badge.ng{background:#ffebee;color:#d32f2f;}
-.session-log-num{font-size:12px;color:rgba(255,255,255,.6);flex-shrink:0;min-width:38px;}
-.session-log-text{font-size:13px;color:rgba(255,255,255,.9);line-height:1.4;}
+.session-log-badge.ok{background:#e8f5e9;color:#2e7d32;}
+.session-log-badge.ng{background:#ffebee;color:#c62828;}
+.session-log-num{font-size:12px;color:#888;flex-shrink:0;min-width:44px;}
+.session-log-text{font-size:13px;color:#333;line-height:1.4;}
 
 /* ===== WRONG / REVIEW LIST ===== */
 #wrongScreen,#reviewScreen{background:var(--bg);}
@@ -248,6 +260,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;bac
     <div class="quiz-title" id="quizTitle"></div>
     <div style="display:flex;align-items:center;gap:6px;">
       <div class="quiz-counter" id="quizCounter"></div>
+      <div class="rate-icon" id="rateIcon" onclick="showSessionLog()">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h2v8H3v-8zm4-6h2v14H7V7zm4 3h2v11h-2V10zm4-7h2v18h-2V3zm4 10h2v8h-2v-8z"/></svg>
+        <span id="rateIconPct">—</span>
+      </div>
       <button class="back-btn" onclick="prevQuestion()" style="font-size:11px;padding:5px 9px;opacity:.85;">1問前</button>
       <button class="back-btn" onclick="restartToFirst()" style="font-size:11px;padding:5px 9px;opacity:.85;">1問目</button>
     </div>
@@ -295,14 +311,20 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;bac
       <button class="btn-retry" onclick="retryQuiz()">もう一度挑戦</button>
       <button class="btn-home" onclick="showHome()">ジャンル選択に戻る</button>
     </div>
-    <div class="session-log-section" id="sessionLogSection">
-      <div class="session-log-section-title" id="sessionLogTitle">回答一覧</div>
-      <div id="sessionLogList"></div>
-    </div>
   </div>
 </div>
 
-
+<!-- SESSION LOG OVERLAY -->
+<div class="session-log-overlay" id="sessionLogOverlay" onclick="closeSessionLog(event)">
+  <div class="session-log-card">
+    <div class="session-log-head">
+      <h3 id="sessionLogTitle">回答一覧</h3>
+      <button class="session-log-x" onclick="closeSessionLog()">✕</button>
+    </div>
+    <div class="session-log-summary" id="sessionLogSummary"></div>
+    <div class="session-log-body" id="sessionLogList"></div>
+  </div>
+</div>
 
 <!-- SEARCH RESULT -->
 <div id="searchScreen" class="screen">
@@ -654,16 +676,28 @@ function restartToFirst() {
   renderQuestion();
 }
 
+function updateRateIcon() {
+  const el = document.getElementById('rateIconPct');
+  if(!el) return;
+  const n = sessionLog.length;
+  const ok = sessionLog.filter(x => x.correct).length;
+  el.textContent = n ? Math.round(ok / n * 100) + '%' : '—';
+}
+
 function showSessionLog() {
-  const section = document.getElementById('sessionLogSection');
+  const overlay = document.getElementById('sessionLogOverlay');
   const list = document.getElementById('sessionLogList');
   const title = document.getElementById('sessionLogTitle');
-  const isShowing = section.classList.contains('show');
-  if(isShowing) { section.classList.remove('show'); return; }
-  title.textContent = `回答一覧（${sessionLog.length}問）`;
+  const summary = document.getElementById('sessionLogSummary');
+  const n = sessionLog.length;
+  const ok = sessionLog.filter(x => x.correct).length;
+  const ng = n - ok;
+  const pct = n ? Math.round(ok / n * 100) : 0;
+  title.textContent = `回答一覧（${n}問）`;
+  summary.innerHTML = `<span>正解 <b>${ok}</b></span><span>不正解 <b>${ng}</b></span><span>正解率 <b>${pct}%</b></span>`;
   list.innerHTML = '';
-  if(sessionLog.length === 0) {
-    list.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,.5);padding:16px;">まだ回答した問題がありません</div>';
+  if(n === 0) {
+    list.innerHTML = '<div class="session-log-empty">まだ回答した問題がありません</div>';
   } else {
     sessionLog.forEach(item => {
       const div = document.createElement('div');
@@ -673,8 +707,12 @@ function showSessionLog() {
       list.appendChild(div);
     });
   }
-  section.classList.add('show');
-  section.scrollIntoView({behavior:'smooth', block:'nearest'});
+  overlay.classList.add('show');
+}
+
+function closeSessionLog(e) {
+  if(e && e.target !== document.getElementById('sessionLogOverlay')) return;
+  document.getElementById('sessionLogOverlay').classList.remove('show');
 }
 
 function prevQuestion() {
@@ -731,6 +769,7 @@ function renderQuestion() {
   document.getElementById('quizCounter').textContent = `${currentQIdx+1}/${total}`;
   document.getElementById('progressBar').style.width = `${(currentQIdx/total)*100}%`;
   document.getElementById('resultOverlay').classList.remove('show');
+  updateRateIcon();
 
   // 過去周回の正誤履歴バッジ
   const lapHistEl = document.getElementById('lapHistory');
@@ -837,6 +876,7 @@ function answer4(userAnswer) {
 
   if(correct) sessionCorrect++; else sessionWrong++;
   sessionLog.push({num: currentQIdx + 1, correct, q: q.q});
+  updateRateIcon();
   if(!isReviewMode) {
     const g = GENRES[currentGenreIdx];
     const key = genKey(g.id, q.origIdx);
@@ -865,6 +905,7 @@ function answer(userAnswer) {
   const correct = userAnswer === q.a;
   if(correct) sessionCorrect++; else sessionWrong++;
   sessionLog.push({num: currentQIdx + 1, correct, q: q.q});
+  updateRateIcon();
 
   if(!isReviewMode) {
     const g = GENRES[currentGenreIdx];
