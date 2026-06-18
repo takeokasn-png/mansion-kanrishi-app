@@ -128,23 +128,20 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;bac
 .btn-retry{background:#ffd54f;color:#1a237e;}
 .btn-home{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3)!important;}
 
-/* ===== SESSION LOG MODAL ===== */
-.session-log-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:none;align-items:flex-end;}
-.session-log-backdrop.show{display:flex;}
-.session-log-sheet{background:#fff;border-radius:24px 24px 0 0;width:100%;max-height:80vh;display:flex;flex-direction:column;padding-bottom:env(safe-area-inset-bottom,0);}
-.session-log-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px 12px;border-bottom:1px solid #eee;}
-.session-log-header h3{margin:0;font-size:16px;font-weight:700;color:#333;}
-.session-log-close{background:none;border:none;font-size:22px;color:#999;cursor:pointer;padding:4px 8px;}
-.session-log-list{overflow-y:auto;flex:1;padding:8px 16px 16px;}
-.session-log-item{display:flex;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid #f0f0f0;}
-.session-log-item:last-child{border-bottom:none;}
-.session-log-badge{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0;}
-.session-log-badge.ok{background:#e8f5e9;color:#388e3c;}
-.session-log-badge.ng{background:#ffebee;color:#d32f2f;}
-.session-log-num{font-size:12px;color:#888;flex-shrink:0;min-width:36px;}
-.session-log-text{font-size:13px;color:#333;line-height:1.4;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
 .result-circle{cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:rgba(255,255,255,.2);}
 .result-circle:active{opacity:.8;}
+/* ===== SESSION LOG (inline on result screen) ===== */
+#resultScreen{overflow-y:auto;}
+.result-screen-body{justify-content:flex-start!important;padding-top:calc(var(--safe-top)+32px);}
+.session-log-section{width:100%;background:rgba(255,255,255,.1);border-radius:16px;overflow:hidden;display:none;}
+.session-log-section.show{display:block;}
+.session-log-section-title{font-size:14px;font-weight:700;color:rgba(255,255,255,.7);padding:12px 16px 8px;letter-spacing:.05em;}
+.session-log-item{display:flex;align-items:center;gap:10px;padding:10px 16px;border-top:1px solid rgba(255,255,255,.1);}
+.session-log-badge{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0;}
+.session-log-badge.ok{background:#e8f5e9;color:#388e3c;}
+.session-log-badge.ng{background:#ffebee;color:#d32f2f;}
+.session-log-num{font-size:12px;color:rgba(255,255,255,.6);flex-shrink:0;min-width:38px;}
+.session-log-text{font-size:13px;color:rgba(255,255,255,.9);line-height:1.4;}
 
 /* ===== WRONG / REVIEW LIST ===== */
 #wrongScreen,#reviewScreen{background:var(--bg);}
@@ -287,7 +284,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;bac
     <div class="result-genre-name" id="finalGenreName"></div>
     <div class="result-circle" id="resultCircle">
       <div class="result-pct" id="finalPct"></div>
-      <div class="result-label">正解率 ▸</div>
+      <div class="result-label">正解率（タップで一覧）</div>
     </div>
     <div class="result-stats">
       <div class="stat-box"><div class="stat-num" id="finalCorrect"></div><div class="stat-lbl">正解</div></div>
@@ -298,19 +295,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;bac
       <button class="btn-retry" onclick="retryQuiz()">もう一度挑戦</button>
       <button class="btn-home" onclick="showHome()">ジャンル選択に戻る</button>
     </div>
+    <div class="session-log-section" id="sessionLogSection">
+      <div class="session-log-section-title" id="sessionLogTitle">回答一覧</div>
+      <div id="sessionLogList"></div>
+    </div>
   </div>
 </div>
 
-<!-- SESSION LOG MODAL -->
-<div class="session-log-backdrop" id="sessionLogBackdrop" onclick="closeSessionLog(event)">
-  <div class="session-log-sheet">
-    <div class="session-log-header">
-      <h3 id="sessionLogTitle">回答一覧</h3>
-      <button class="session-log-close" onclick="closeSessionLog()">✕</button>
-    </div>
-    <div class="session-log-list" id="sessionLogList"></div>
-  </div>
-</div>
+
 
 <!-- SEARCH RESULT -->
 <div id="searchScreen" class="screen">
@@ -444,7 +436,6 @@ function startQuizFromSearch(genreIdx, qIdx) {
   currentQIdx = qIdx;
   sessionCorrect = 0;
   sessionWrong = 0;
-  sessionLog = [];
   sessionLog = [];
   document.getElementById('quizTitle').textContent = g.name;
   showScreen('quizScreen');
@@ -664,30 +655,26 @@ function restartToFirst() {
 }
 
 function showSessionLog() {
+  const section = document.getElementById('sessionLogSection');
   const list = document.getElementById('sessionLogList');
   const title = document.getElementById('sessionLogTitle');
+  const isShowing = section.classList.contains('show');
+  if(isShowing) { section.classList.remove('show'); return; }
   title.textContent = `回答一覧（${sessionLog.length}問）`;
   list.innerHTML = '';
   if(sessionLog.length === 0) {
-    list.innerHTML = '<p style="text-align:center;color:#999;padding:24px;">まだ回答した問題がありません</p>';
+    list.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,.5);padding:16px;">まだ回答した問題がありません</div>';
   } else {
     sessionLog.forEach(item => {
       const div = document.createElement('div');
       div.className = 'session-log-item';
-      const shortQ = item.q.replace(/\s+/g,' ').trim().slice(0, 60) + (item.q.length > 60 ? '…' : '');
-      div.innerHTML = `
-        <div class="session-log-badge ${item.correct ? 'ok' : 'ng'}">${item.correct ? '○' : '×'}</div>
-        <div class="session-log-num">第${item.num}問</div>
-        <div class="session-log-text">${shortQ}</div>`;
+      const shortQ = item.q.replace(/\s+/g,' ').trim().slice(0, 55) + (item.q.length > 55 ? '…' : '');
+      div.innerHTML = `<div class="session-log-badge ${item.correct ? 'ok' : 'ng'}">${item.correct ? '○' : '×'}</div><div class="session-log-num">第${item.num}問</div><div class="session-log-text">${shortQ}</div>`;
       list.appendChild(div);
     });
   }
-  document.getElementById('sessionLogBackdrop').classList.add('show');
-}
-
-function closeSessionLog(e) {
-  if(e && e.target !== document.getElementById('sessionLogBackdrop')) return;
-  document.getElementById('sessionLogBackdrop').classList.remove('show');
+  section.classList.add('show');
+  section.scrollIntoView({behavior:'smooth', block:'nearest'});
 }
 
 function prevQuestion() {
@@ -1079,7 +1066,6 @@ if('serviceWorker' in navigator) {
 }
 
 document.getElementById('resultCircle').addEventListener('click', showSessionLog);
-document.getElementById('resultCircle').addEventListener('touchend', function(e){ e.preventDefault(); showSessionLog(); });
 </script>
 </body>
 </html>
