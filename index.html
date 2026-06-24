@@ -268,8 +268,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;bac
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h2v8H3v-8zm4-6h2v14H7V7zm4 3h2v11h-2V10zm4-7h2v18h-2V3zm4 10h2v8h-2v-8z"/></svg>
         <span id="rateIconPct">—</span>
       </div>
-      <button class="back-btn" onclick="prevQuestion()" style="font-size:11px;padding:5px 9px;opacity:.85;">1問前</button>
-      <button class="back-btn" onclick="restartToFirst()" style="font-size:11px;padding:5px 9px;opacity:.85;">1問目</button>
+      <button class="back-btn" onclick="prevQuestion()" style="font-size:11px;padding:5px 9px;opacity:.85;">前へ</button>
+      <button class="back-btn" onclick="nextQuestionNav()" style="font-size:11px;padding:5px 9px;opacity:.85;">次へ</button>
+      <button class="back-btn" onclick="restartToFirst()" style="font-size:11px;padding:5px 9px;opacity:.85;">1問目へ</button>
     </div>
   </div>
   <div class="progress-bar-wrap"><div class="progress-bar-inner" id="progressBar"></div></div>
@@ -738,7 +739,21 @@ function prevQuestion() {
   if(currentQIdx <= 0) return;
   currentQIdx--;
   saveSession();
-  document.getElementById('resultOverlay').classList.remove('show');
+  const ro = document.getElementById('resultOverlay');
+  ro.classList.remove('show');
+  ro.classList.remove('hide');
+  document.getElementById('backToResultBtn').style.display = 'none';
+  renderQuestion();
+}
+
+function nextQuestionNav() {
+  if(currentQIdx >= currentQuestions.length - 1) return;
+  currentQIdx++;
+  saveSession();
+  const ro = document.getElementById('resultOverlay');
+  ro.classList.remove('show');
+  ro.classList.remove('hide');
+  document.getElementById('backToResultBtn').style.display = 'none';
   renderQuestion();
 }
 
