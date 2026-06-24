@@ -98,6 +98,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;bac
 /* 結果オーバーレイ */
 .result-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;align-items:flex-end;justify-content:center;padding:0 0 calc(var(--safe-bottom)+20px);overflow-y:auto;}
 .result-overlay.show{display:flex;}
+.result-overlay.show.hide{display:none;}
 .result-card{background:#fff;border-radius:28px 28px 24px 24px;padding:24px 20px 20px;width:100%;max-width:500px;box-shadow:0 -8px 40px rgba(0,0,0,.2);}
 .result-header{text-align:center;margin-bottom:12px;}
 .result-badge{display:inline-block;border-radius:12px;padding:8px 24px;font-size:20px;font-weight:700;margin-bottom:8px;}
@@ -110,6 +111,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;bac
 .review-check-btn{width:100%;padding:13px;border:2px solid #e0e0e0;border-radius:12px;background:#fff;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:10px;transition:all .15s;color:#555;}
 .review-check-btn.checked{background:#fff3e0;border-color:var(--orange);color:var(--orange);}
 
+.check-q-btn{width:100%;padding:13px;border:2px solid #90caf9;border-radius:12px;background:#e3f2fd;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:10px;color:#1565c0;}
+.back-to-result-btn{position:fixed;bottom:calc(var(--safe-bottom)+20px);left:50%;transform:translateX(-50%);z-index:90;padding:14px 32px;background:var(--primary);color:#fff;border:none;border-radius:40px;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.25);white-space:nowrap;}
 .next-btn{width:100%;padding:16px;background:var(--primary);color:#fff;border:none;border-radius:14px;font-size:16px;font-weight:700;cursor:pointer;}
 
 /* ===== RESULT SCREEN ===== */
@@ -282,6 +285,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;bac
     </div>
     <div class="choice-btns" id="choiceBtns" style="display:none;flex-direction:column;gap:10px;width:100%;max-width:500px;"></div>
   </div>
+  <button class="back-to-result-btn" id="backToResultBtn" onclick="toggleQuestionView()" style="display:none;">解説に戻る ▲</button>
   <div class="result-overlay" id="resultOverlay">
     <div class="result-card">
       <div class="result-header">
@@ -290,6 +294,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;bac
       </div>
       <div class="result-explanation" id="resultExplanation"></div>
       <button class="review-check-btn" id="reviewCheckBtn" onclick="toggleReview()">☆ 復習リストに追加</button>
+      <button class="check-q-btn" id="checkQBtn" onclick="toggleQuestionView()">問題を確認</button>
       <button class="next-btn" id="nextBtn" onclick="nextQuestion()">次の問題 →</button>
     </div>
   </div>
@@ -782,7 +787,10 @@ function renderQuestion() {
   document.getElementById('questionNum').textContent = `第 ${currentQIdx+1} 問`;
   document.getElementById('quizCounter').textContent = `${currentQIdx+1}/${total}`;
   document.getElementById('progressBar').style.width = `${(currentQIdx/total)*100}%`;
-  document.getElementById('resultOverlay').classList.remove('show');
+  const ro = document.getElementById('resultOverlay');
+  ro.classList.remove('show');
+  ro.classList.remove('hide');
+  document.getElementById('backToResultBtn').style.display = 'none';
   updateRateIcon();
 
   // 過去周回の正誤履歴バッジ
@@ -846,6 +854,13 @@ function showResultOverlay(correct, q) {
   const isLast = currentQIdx === currentQuestions.length - 1;
   nextBtn.textContent = isLast ? '結果を見る →' : '次の問題 →';
   document.getElementById('resultOverlay').classList.add('show');
+}
+
+function toggleQuestionView() {
+  const overlay = document.getElementById('resultOverlay');
+  const backBtn = document.getElementById('backToResultBtn');
+  const isShowing = overlay.classList.toggle('hide');
+  backBtn.style.display = isShowing ? 'block' : 'none';
 }
 
 function toggleReview() {
