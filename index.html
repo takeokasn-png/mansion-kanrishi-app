@@ -385,6 +385,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;bac
 </div>
 
 <script src="questions.js"></script>
+<script src="laws.js"></script>
 <script>
 const STORAGE_KEY = 'mgr_stats_v2';
 let state = loadState();
@@ -872,11 +873,11 @@ function showResultOverlay(correct, q) {
 
   if(is4Choice()) {
     ansText.textContent = `正解: ${q.answer}. ${q.choices[String(q.answer)] || ''}`;
-    expl.textContent = q.explanation || '';
+    expl.innerHTML = linkifyLaw(q.explanation || '');
     expl.style.display = q.explanation ? 'block' : 'none';
   } else {
     ansText.textContent = `正解: ${q.a ? '○（正しい）' : '×（誤り）'}`;
-    expl.textContent = q.e || '';
+    expl.innerHTML = linkifyLaw(q.e || '');
     expl.style.display = q.e ? 'block' : 'none';
   }
 
@@ -1045,7 +1046,7 @@ function showWrongList() {
       div.innerHTML = `
         <div class="list-item-q">${item.q}</div>
         <div class="list-item-a">正解: ${item.a === true ? '○（正しい）' : item.a === false ? '×（誤り）' : item.a}</div>
-        <div class="list-item-e">${item.e}</div>
+        <div class="list-item-e">${linkifyLaw(item.e)}</div>
       `;
       list.appendChild(div);
     });
@@ -1077,7 +1078,7 @@ function showReviewScreen() {
         <button class="review-del-btn" onclick="removeReview('${rkey}')">削除</button>
         <div class="list-item-q">${item.q}</div>
         <div class="list-item-a">${ansLabel}</div>
-        ${explText ? `<div class="list-item-e">${explText}</div>` : ''}
+        ${explText ? `<div class="list-item-e">${linkifyLaw(explText)}</div>` : ''}
       `;
       list.appendChild(div);
     });
