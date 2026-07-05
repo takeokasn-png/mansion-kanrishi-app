@@ -289,20 +289,27 @@ function lawNormalize(name){ return LAW_ALIAS[name] || name; }
 function linkifyLaw(text){
   const esc = lawEsc(text);
   const names = '区分所有法|建物の区分所有等に関する法律|民法|標準管理規約|マンション管理適正化法|適正化法|マンションの建替え等の円滑化に関する法律|円滑化法|被災区分所有建物の再建等に関する特別措置法|被災マンション法|不動産登記法|借地借家法|建築基準法|消防法|水道法|民事訴訟法|民事執行法|個人情報保護法|耐震改修促進法|同法|同規約';
-  const re = new RegExp('('+names+')(第?(\\d+)条(?:の(\\d+)(?![項号年]))?)','g');
+  // 法令名付き引用に加え、裸の「17条1項」「61条の2」等も直前に出た法令として解決する。
+  // 裸引用は直前1文字が漢字・数字でない場合のみ対象（「消費税法9条」「施行令5条」「同基準第7条」等の誤リンク防止）。
+  const re = new RegExp('(?:('+names+')|(^|[^一-龠0-9０-９]))(第?(\\d+)条(?:の(\\d+)(?![項号年]))?(?:第?\\d+項(?:第?\\d+号)?)?)(?![件文例])','g');
   let lastLaw = null;
-  return esc.replace(re, function(m, law, artPart, artN, artSub){
+  return esc.replace(re, function(m, law, prefix, artPart, artN, artSub){
     let l = law;
     if(law === '同法' || law === '同規約'){
       if(!lastLaw) return m;
       l = lastLaw;
-    } else {
+    } else if(law){
       l = lawNormalize(law);
       lastLaw = l;
+    } else {
+      // 裸の条数引用: 直前に出た法令で解決
+      if(!lastLaw) return m;
+      l = lastLaw;
     }
     if(!LAW_DB[l]) return m;
     const art = artN + (artSub ? 'の' + artSub : '');
-    return '<span class="law-ref" data-law="'+lawEsc(l)+'" data-art="'+lawEsc(art)+'" onclick="showLawRef(this.dataset.law,this.dataset.art);event.stopPropagation();">'+m+'</span>';
+    const span = '<span class="law-ref" data-law="'+lawEsc(l)+'" data-art="'+lawEsc(art)+'" onclick="showLawRef(this.dataset.law,this.dataset.art);event.stopPropagation();">'+(law?m:artPart)+'</span>';
+    return law ? span : (prefix||'') + span;
   });
 }
 
