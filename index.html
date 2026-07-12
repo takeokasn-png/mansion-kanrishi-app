@@ -530,7 +530,7 @@ function renderGenreGrid() {
   if(isEditMode) grid.classList.add('edit-mode');
   else grid.classList.remove('edit-mode');
 
-  const icons = ['🟤','🟢','🟠','🟣','🔴','🔵','🟡','🆕','📋','📖','🏛️','⚖️','🏗️','📜'];
+  const icons = ['🟤','🟢','🟠','🟣','🔴','🔵','🟡','🏢','📋','📖','🏛️','⚖️','🏗️','📜'];
   const ordered = getOrderedGenres();
 
   ordered.forEach((g, orderIdx) => {
@@ -562,7 +562,7 @@ function renderGenreGrid() {
       <div class="genre-info">
         <div class="genre-name">${g.name}${lapLabel}</div>
         <div class="genre-meta">${answered}/${total}問 完了</div>
-        <div class="genre-progress"><div class="genre-progress-bar" style="width:${answered/total*100}%;background:${g.color}"></div></div>
+        <div class="genre-progress"><div class="genre-progress-bar" style="width:${answered/total*100}%;background:#3949ab"></div></div>
       </div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
         <div class="genre-score" style="color:${ballColor}"><span class="genre-score-label">正解率</span>${answered>0?pct+'%':'--'}</div>
