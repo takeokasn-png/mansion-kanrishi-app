@@ -687,12 +687,6 @@ function startQuiz(genreIdx) {
     sessionLog = Array.isArray(saved.log) ? saved.log : [];
   } else {
     currentQuestions = g.questions.map((q,i) => ({...q, origIdx: i}));
-    if(g.type !== '4choice') {
-      for(let i = currentQuestions.length-1; i>0; i--) {
-        const j = Math.floor(Math.random()*(i+1));
-        [currentQuestions[i], currentQuestions[j]] = [currentQuestions[j], currentQuestions[i]];
-      }
-    }
     currentQIdx = 0;
     sessionLog = [];
   }
