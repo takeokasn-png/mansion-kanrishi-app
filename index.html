@@ -111,6 +111,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;bac
 .question-text{font-size:17px;line-height:1.7;font-weight:500;color:var(--text);}
 .answer-btns{display:flex;gap:14px;width:100%;max-width:500px;}
 .ans-btn{flex:1;padding:18px;border:none;border-radius:16px;font-size:26px;font-weight:700;cursor:pointer;transition:transform .1s,opacity .2s;box-shadow:0 4px 14px rgba(0,0,0,.15);}
+.ans-btn:disabled{opacity:.5;cursor:default;}
 .ans-btn:active{transform:scale(.95);}
 .ans-btn.maru{background:var(--green);color:#fff;}
 .ans-btn.batsu{background:var(--red);color:#fff;}
@@ -397,6 +398,7 @@ let sessionCorrect = 0;
 let sessionWrong = 0;
 let sessionLog = [];
 let isReviewMode = false;
+let qAnswered = false; // 現在の問題に回答済みか（回答後の再タップによる上書き防止）
 
 function loadState() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; } catch(e) { return {}; }
@@ -857,6 +859,9 @@ function renderQuestion() {
     document.getElementById('answerBtns').style.display = 'flex';
     document.getElementById('choiceBtns').style.display = 'none';
   }
+  // 新しい問題では○×ボタンを再び有効化
+  qAnswered = false;
+  document.querySelectorAll('#answerBtns .ans-btn').forEach(b => b.disabled = false);
 }
 
 function showResultOverlay(correct, q) {
@@ -927,6 +932,8 @@ function toggleReview() {
 }
 
 function answer4(userAnswer) {
+  if(qAnswered) return; // 回答済みなら再タップしても記録を変更しない
+  qAnswered = true;
   const q = currentQuestions[currentQIdx];
   const correct = userAnswer === q.answer;
   const btns = document.getElementById('choiceBtns').querySelectorAll('.choice-btn');
@@ -964,6 +971,9 @@ function answer4(userAnswer) {
 }
 
 function answer(userAnswer) {
+  if(qAnswered) return; // 回答済みなら再タップしても記録を変更しない
+  qAnswered = true;
+  document.querySelectorAll('#answerBtns .ans-btn').forEach(b => b.disabled = true);
   const q = currentQuestions[currentQIdx];
   const correct = userAnswer === q.a;
   if(correct) sessionCorrect++; else sessionWrong++;
