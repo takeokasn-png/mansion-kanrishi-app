@@ -533,6 +533,9 @@ function renderGenreGrid() {
   else grid.classList.remove('edit-mode');
 
   const icons = ['🟤','🟢','🟠','🟣','🔴','🔵','🟡','🏢','📋','📖','🏛️','⚖️','🏗️','📜','💰','🗺️','📐','⚙️','🧰','📕','📗','📘'];
+  // R8から始まる問題集は本アイコンで統一し、色違いで並べる
+  const R8_BOOKS = ['📕','📗','📘','📙','📔','📓','📒'];
+  const r8Ids = GENRES.filter(x => x.id.indexOf('r8_') === 0).map(x => x.id);
   const ordered = getOrderedGenres();
 
   ordered.forEach((g, orderIdx) => {
@@ -554,7 +557,7 @@ function renderGenreGrid() {
            <span style="font-size:1.2em;line-height:1;">${icons[realIdx]}</span>
            <span style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:13px;font-weight:900;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.7);pointer-events:none;">${kakomonMatch[1]}</span>
          </div>`
-      : `<div class="genre-icon" style="background:${g.color}20">${icons[realIdx] || '📌'}</div>`;
+      : `<div class="genre-icon" style="background:${g.color}20">${r8Ids.indexOf(g.id) >= 0 ? R8_BOOKS[r8Ids.indexOf(g.id) % R8_BOOKS.length] : (icons[realIdx] || '📌')}</div>`;
     const hasProgress = laps > 0 || answered > 0;
     const lapLabel = hasProgress ? `<span style="font-size:10px;font-weight:600;background:${ballColor}22;color:${ballColor};border-radius:6px;padding:1px 6px;margin-left:5px;">${laps + 1}周目</span>` : '';
     const card = document.createElement('div');
