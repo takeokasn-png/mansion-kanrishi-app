@@ -43,6 +43,10 @@ body.dark-mode .session-log-num{color:#aaa;}
 body.dark-mode .session-log-text{color:#ccc;}
 body.dark-mode .session-log-badge.ok{background:#1b3a1e;color:#66bb6a;}
 body.dark-mode .session-log-badge.ng{background:#3a1a1a;color:#ef5350;}
+body.dark-mode .session-log-edit{border-color:#555;color:#ccc;}
+body.dark-mode .session-log-tools{border-color:#333;}
+body.dark-mode .session-log-reset{background:#3a1a1a;border-color:#7a2e2e;color:#ef5350;}
+body.dark-mode .session-log-del{background:#2a2a2a;border-color:#7a2e2e;color:#ef5350;}
 body.dark-mode .result-card{background:#1e1e1e;}
 body.dark-mode .result-explanation{background:#2a2a2a;color:#e0e0e0;}
 body.dark-mode .result-answer-text{color:#aaa;}
@@ -179,7 +183,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;bac
 .session-log-badge.ok{background:#e8f5e9;color:#2e7d32;}
 .session-log-badge.ng{background:#ffebee;color:#c62828;}
 .session-log-num{font-size:12px;color:#888;flex-shrink:0;min-width:44px;}
-.session-log-text{font-size:13px;color:#333;line-height:1.4;}
+.session-log-text{font-size:13px;color:#333;line-height:1.4;flex:1;min-width:0;}
+.session-log-head-btns{display:flex;align-items:center;gap:4px;}
+.session-log-edit{background:none;border:1.5px solid #ccc;border-radius:999px;font-size:12px;font-weight:700;color:#555;cursor:pointer;padding:4px 12px;line-height:1.2;}
+.session-log-edit.on{background:var(--orange);border-color:var(--orange);color:#fff;}
+.session-log-tools{display:none;padding:8px 20px;border-bottom:1px solid #f2f2f2;}
+.session-log-card.editing .session-log-tools{display:block;}
+.session-log-reset{width:100%;background:#ffebee;color:#c62828;border:1.5px solid #ef9a9a;border-radius:10px;padding:9px;font-size:13px;font-weight:700;cursor:pointer;}
+.session-log-del{display:none;flex-shrink:0;background:#fff;color:#c62828;border:1.5px solid #ef9a9a;border-radius:8px;font-size:12px;font-weight:700;padding:5px 10px;cursor:pointer;}
+.session-log-card.editing .session-log-del{display:block;}
+.session-log-card.editing .session-log-item{cursor:default;}
 
 /* ===== WRONG / REVIEW LIST ===== */
 #wrongScreen,#reviewScreen{background:var(--bg);}
@@ -348,9 +361,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;bac
   <div class="session-log-card">
     <div class="session-log-head">
       <h3 id="sessionLogTitle">回答一覧</h3>
-      <button class="session-log-x" onclick="closeSessionLog()">✕</button>
+      <div class="session-log-head-btns">
+        <button class="session-log-edit" id="sessionLogEditBtn" onclick="toggleSessionLogEdit()">編集</button>
+        <button class="session-log-x" onclick="closeSessionLog()">✕</button>
+      </div>
     </div>
     <div class="session-log-summary" id="sessionLogSummary"></div>
+    <div class="session-log-tools"><button class="session-log-reset" onclick="resetSessionLog()">回答一覧をリセット</button></div>
     <div class="session-log-body" id="sessionLogList"></div>
   </div>
 </div>
@@ -397,6 +414,7 @@ let currentQIdx = 0;
 let sessionCorrect = 0;
 let sessionWrong = 0;
 let sessionLog = [];
+let sessionLogEditing = false; // 回答一覧の編集モード
 let isReviewMode = false;
 let qAnswered = false; // 現在の問題に回答済みか（回答後の再タップによる上書き防止）
 
@@ -690,6 +708,10 @@ function startQuiz(genreIdx) {
     currentQuestions = saved.order.map(origIdx => ({...g.questions[origIdx], origIdx}));
     currentQIdx = saved.qIdx;
     sessionLog = Array.isArray(saved.log) ? saved.log : [];
+    // 旧データの重複（同じ問題の複数回答）は最後の回答だけ残す
+    const lastByNum = {};
+    sessionLog.forEach(x => { lastByNum[x.num] = x; });
+    sessionLog = sessionLog.filter(x => lastByNum[x.num] === x);
   } else {
     currentQuestions = g.questions.map((q,i) => ({...q, origIdx: i}));
     currentQIdx = 0;
@@ -726,6 +748,9 @@ function showSessionLog() {
   const ok = sessionLog.filter(x => x.correct).length;
   const ng = n - ok;
   const pct = n ? Math.round(ok / n * 100) : 0;
+  overlay.querySelector('.session-log-card').classList.toggle('editing', sessionLogEditing);
+  document.getElementById('sessionLogEditBtn').textContent = sessionLogEditing ? '完了' : '編集';
+  document.getElementById('sessionLogEditBtn').classList.toggle('on', sessionLogEditing);
   title.textContent = `回答一覧（${n}問）`;
   summary.innerHTML = `<span>正解 <b>${ok}</b></span><span>不正解 <b>${ng}</b></span><span>正解率 <b>${pct}%</b></span>`;
   list.innerHTML = '';
@@ -736,8 +761,9 @@ function showSessionLog() {
       const div = document.createElement('div');
       div.className = 'session-log-item';
       const shortQ = item.q.replace(/\s+/g,' ').trim().slice(0, 55) + (item.q.length > 55 ? '…' : '');
-      div.innerHTML = `<div class="session-log-badge ${item.correct ? 'ok' : 'ng'}">${item.correct ? '○' : '×'}</div><div class="session-log-num">第${item.num}問</div><div class="session-log-text">${shortQ}</div>`;
-      div.addEventListener('click', () => jumpToLogQuestion(item.num));
+      div.innerHTML = `<div class="session-log-badge ${item.correct ? 'ok' : 'ng'}">${item.correct ? '○' : '×'}</div><div class="session-log-num">第${item.num}問</div><div class="session-log-text">${shortQ}</div><button class="session-log-del">削除</button>`;
+      div.querySelector('.session-log-del').addEventListener('click', (e) => { e.stopPropagation(); deleteSessionLogItem(item.num); });
+      div.addEventListener('click', () => { if(!sessionLogEditing) jumpToLogQuestion(item.num); });
       list.appendChild(div);
     });
   }
@@ -757,6 +783,60 @@ function jumpToLogQuestion(num) {
 function closeSessionLog(e) {
   if(e && e.target !== document.getElementById('sessionLogOverlay')) return;
   document.getElementById('sessionLogOverlay').classList.remove('show');
+  sessionLogEditing = false;
+}
+
+function toggleSessionLogEdit() {
+  sessionLogEditing = !sessionLogEditing;
+  showSessionLog();
+}
+
+// 回答記録を取り消す（今周の正誤・周回履歴から外し、未回答扱いに戻す）
+function clearAnswerRecord(num) {
+  if(isReviewMode || currentGenreIdx < 0) return;
+  const q = currentQuestions[num - 1];
+  if(!q) return;
+  const g = GENRES[currentGenreIdx];
+  if(state._cur && state._cur[g.id]) delete state._cur[g.id][q.origIdx];
+  const lapNum = (state._laps && state._laps[g.id]) || 0;
+  const hist = state._history && state._history[g.id] && state._history[g.id][q.origIdx];
+  if(hist && hist.length > lapNum) {
+    hist.length = lapNum;
+    if(hist.length === 0) delete state._history[g.id][q.origIdx];
+  }
+}
+
+function afterSessionLogChange(affectsCurrent) {
+  sessionCorrect = sessionLog.filter(x => x.correct).length;
+  sessionWrong = sessionLog.length - sessionCorrect;
+  if(!isReviewMode) { saveState(); saveSession(); }
+  updateRateIcon();
+  if(affectsCurrent && document.getElementById('quizScreen').classList.contains('active')) renderQuestion();
+  showSessionLog();
+}
+
+function deleteSessionLogItem(num) {
+  sessionLog = sessionLog.filter(x => x.num !== num);
+  clearAnswerRecord(num);
+  afterSessionLogChange(num === currentQIdx + 1);
+}
+
+function resetSessionLog() {
+  if(sessionLog.length === 0) return;
+  if(!confirm('この周の回答一覧をすべて削除します。よろしいですか？')) return;
+  sessionLog.forEach(x => clearAnswerRecord(x.num));
+  sessionLog = [];
+  afterSessionLogChange(true);
+}
+
+// 同じ周で同じ問題に再回答したら、前の記録を消して最後の回答だけを残す
+function recordSessionLog(correct, q) {
+  const num = currentQIdx + 1;
+  const i = sessionLog.findIndex(x => x.num === num);
+  const entry = {num, correct, q: q.q};
+  if(i >= 0) sessionLog[i] = entry; else sessionLog.push(entry);
+  sessionCorrect = sessionLog.filter(x => x.correct).length;
+  sessionWrong = sessionLog.length - sessionCorrect;
 }
 
 function prevQuestion() {
@@ -947,8 +1027,7 @@ function answer4(userAnswer) {
     else if(num === userAnswer && !correct) btn.classList.add('wrong');
   });
 
-  if(correct) sessionCorrect++; else sessionWrong++;
-  sessionLog.push({num: currentQIdx + 1, correct, q: q.q});
+  recordSessionLog(correct, q);
   updateRateIcon();
   if(!isReviewMode) {
     const g = GENRES[currentGenreIdx];
@@ -979,8 +1058,7 @@ function answer(userAnswer) {
   document.querySelectorAll('#answerBtns .ans-btn').forEach(b => b.disabled = true);
   const q = currentQuestions[currentQIdx];
   const correct = userAnswer === q.a;
-  if(correct) sessionCorrect++; else sessionWrong++;
-  sessionLog.push({num: currentQIdx + 1, correct, q: q.q});
+  recordSessionLog(correct, q);
   updateRateIcon();
 
   if(!isReviewMode) {
