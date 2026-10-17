@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mansionkanrishi-v52';
+const CACHE_NAME = 'mansionkanrishi-v54';
 const ASSETS = [
   '/mansion-kanrishi-app/',
   '/mansion-kanrishi-app/index.html',
