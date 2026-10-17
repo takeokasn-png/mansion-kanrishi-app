@@ -92,7 +92,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;bac
 .genre-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
 .genre-info{flex:1;min-width:0;}
 .genre-name{font-size:15px;font-weight:700;color:#1a1a2e;margin-bottom:3px;}
-.genre-meta{font-size:12px;color:#888;}
+.genre-meta{font-size:12px;color:#888;display:flex;align-items:center;flex-wrap:wrap;}
 .genre-progress{width:100%;height:4px;background:#e8eaf6;border-radius:2px;margin-top:8px;overflow:hidden;}
 .genre-progress-bar{height:100%;border-radius:2px;transition:width .4s;}
 .genre-score{font-size:12px;font-weight:700;text-align:center;}
@@ -680,8 +680,8 @@ function renderGenreGrid() {
       <div class="drag-handle">☰</div>
       ${kakomonIconHtml}
       <div class="genre-info">
-        <div class="genre-name">${g.name}${lapLabel}</div>
-        <div class="genre-meta">${pos}/${total}問目</div>
+        <div class="genre-name">${g.name}</div>
+        <div class="genre-meta">${pos}/${total}問目${lapLabel}</div>
         <div class="genre-progress"><div class="genre-progress-bar" style="width:${(pos-1)/total*100}%;background:#3949ab"></div></div>
       </div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
