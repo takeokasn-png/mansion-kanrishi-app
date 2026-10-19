@@ -117,6 +117,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;bac
 .lap-badge.ok{background:#e8f5e9;color:#2e7d32;}
 .lap-badge.ng{background:#fce4ec;color:#c62828;}
 .lap-badge.exempt{background:#fff3e0;color:#e65100;}
+.folder-card .genre-icon{font-size:24px;}
+.folder-card .folder-arrow{color:#bbb;font-size:20px;flex-shrink:0;margin-left:2px;}
+.folder-bar{display:flex;align-items:center;gap:10px;color:#fff;}
+.folder-back{background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:10px;padding:7px 12px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;}
+.folder-title{font-size:17px;font-weight:700;flex:1;min-width:0;}
+.kangyo-bulk{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);border-radius:12px;padding:8px 12px;color:#fff;font-size:12px;}
+.kangyo-bulk .lbl{flex:1;min-width:0;line-height:1.35;}
+.kangyo-bulk button{border:1.5px solid rgba(255,255,255,.5);background:rgba(255,255,255,.1);color:#fff;border-radius:9px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;}
+.kangyo-bulk button.active{background:#fff3e0;border-color:#fb8c00;color:#e65100;}
 .kangyo-btn{flex-shrink:0;width:40px;padding:5px 0;border-radius:10px;border:1.5px solid #ccc;background:#fafafa;color:#888;font-size:10px;font-weight:700;line-height:1.25;cursor:pointer;text-align:center;-webkit-tap-highlight-color:transparent;}
 .kangyo-btn.on{background:#fff3e0;border-color:#fb8c00;color:#e65100;}
 body.dark-mode .kangyo-btn{background:#2a2a2a;border-color:#555;color:#aaa;}
@@ -285,7 +294,7 @@ body.dark-mode .kangyo-btn.on{background:#3a2a1a;border-color:#fb8c00;color:#ffb
   </div>
   <div style="height:2.5cm;"></div>
   <nav class="bottom-nav">
-    <button class="nav-btn active" onclick="showHome()">
+    <button class="nav-btn active" onclick="goFolderTop()">
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
       ホーム
     </button>
@@ -587,10 +596,22 @@ function syncExemptForSession(g) {
   saveState();
 }
 function toggleKangyo(gid) {
+  setKangyo(gid, !(state._kangyo && state._kangyo[gid]));
+  saveState();
+  renderGenreGrid();
+}
+// 管業の有無を一括で切り替え（今開いているフォルダ内の50問形式が対象）
+function setKangyoBulk(on) {
+  const f = FOLDERS.find(x => x.id === currentFolder);
+  GENRES.filter(g => isKangyoTarget(g) && (!f || f.match(g))).forEach(g => setKangyo(g.id, on));
+  saveState();
+  renderGenreGrid();
+}
+function setKangyo(gid, on) {
   const g = GENRES.find(x => x.id === gid);
   if(!isKangyoTarget(g)) return;
   if(!state._kangyo) state._kangyo = {};
-  const on = !state._kangyo[gid];
+  if(!!state._kangyo[gid] === on) return;
   if(on) {
     state._kangyo[gid] = true;
     g.questions.forEach((q, i) => { if(isExemptQ(g, q)) markExemptCorrect(g, i); });
@@ -618,8 +639,80 @@ function toggleKangyo(gid) {
     const sess = state._session && state._session[gid];
     if(sess && Array.isArray(sess.log)) sess.log = sess.log.filter(x => x.choice !== '免');
   }
-  saveState();
+}
+
+// ===== フォルダ分け =====
+const isKakomonGenre = g => /^r\d+_kakomon$/.test(g.id);
+const isR8Genre = g => g.id.indexOf('r8_') === 0;
+const FOLDERS = [
+  {id:'kakomon', name:'過去問', icon:'🗂️', color:'#1565C0', match: g => isKakomonGenre(g)},
+  {id:'r8', name:'R8年度 問題集', icon:'📚', color:'#4527A0', match: g => isR8Genre(g)},
+  {id:'ichimon', name:'一問一答', icon:'⭕', color:'#2E7D32', match: g => !isKakomonGenre(g) && !isR8Genre(g)},
+];
+let currentFolder = null;
+try { const f = localStorage.getItem('mgr_folder'); if(FOLDERS.some(x => x.id === f)) currentFolder = f; } catch(e) {}
+function openFolder(id) {
+  currentFolder = id;
+  try { if(id) localStorage.setItem('mgr_folder', id); else localStorage.removeItem('mgr_folder'); } catch(e) {}
   renderGenreGrid();
+  window.scrollTo(0, 0);
+}
+function goFolderTop() {
+  saveSession();
+  openFolder(null);
+  showHome();
+}
+// ジャンルの今周の回答数・正解数（管業有なら免除問題を正解として数える）
+function genreCurStats(g) {
+  const curMap = {...((state._cur && state._cur[g.id]) || {})};
+  if(isKangyoOn(g)) g.questions.forEach((q, i) => { if(isExemptQ(g, q)) curMap[i] = true; });
+  const vals = Object.values(curMap);
+  return {answered: vals.length, correct: vals.filter(v => v === true).length};
+}
+function renderFolderList(grid) {
+  FOLDERS.forEach(f => {
+    const gs = GENRES.filter(f.match);
+    if(!gs.length) return;
+    let qs = 0, ans = 0, ok = 0;
+    gs.forEach(g => { qs += g.questions.length; const st = genreCurStats(g); ans += st.answered; ok += st.correct; });
+    const pct = ans > 0 ? Math.round(ok / ans * 100) + '%' : '--';
+    const kt = gs.filter(isKangyoTarget);
+    const kOn = kt.filter(isKangyoOn).length;
+    const kLabel = kt.length ? `<span style="font-size:10px;font-weight:600;background:#fff3e0;color:#e65100;border-radius:6px;padding:1px 6px;margin-left:5px;">管業有 ${kOn}/${kt.length}</span>` : '';
+    const card = document.createElement('div');
+    card.className = 'genre-card folder-card';
+    card.innerHTML = `
+      <div class="genre-icon" style="background:${f.color}20">${f.icon}</div>
+      <div class="genre-info">
+        <div class="genre-name">${f.name}</div>
+        <div class="genre-meta">${gs.length}冊・${qs.toLocaleString()}問${kLabel}</div>
+      </div>
+      <div class="genre-score genre-score2">
+        <span class="genre-score-label">正解率</span>
+        <div class="genre-score-row" style="color:${f.color}"><span class="lbl">今回</span>${pct}</div>
+      </div>
+      <div class="folder-arrow">›</div>`;
+    card.onclick = () => openFolder(f.id);
+    grid.appendChild(card);
+  });
+}
+function renderFolderHeader(grid, folder) {
+  const bar = document.createElement('div');
+  bar.className = 'folder-bar';
+  bar.innerHTML = `<button class="folder-back">＜ フォルダ一覧</button><div class="folder-title">${folder.icon} ${folder.name}</div>`;
+  bar.querySelector('.folder-back').onclick = () => openFolder(null);
+  grid.appendChild(bar);
+  const kt = GENRES.filter(g => folder.match(g) && isKangyoTarget(g));
+  if(kt.length) {
+    const kOn = kt.filter(isKangyoOn).length;
+    const bulk = document.createElement('div');
+    bulk.className = 'kangyo-bulk';
+    bulk.innerHTML = `<span class="lbl">管業 免除（問46〜50）一括<br><span style="opacity:.7">現在 有 ${kOn}/${kt.length}</span></span>
+      <button class="${kOn === kt.length ? 'active' : ''}" data-on="1">全部 有</button>
+      <button class="${kOn === 0 ? 'active' : ''}" data-on="0">全部 無</button>`;
+    bulk.querySelectorAll('button').forEach(b => b.onclick = () => setKangyoBulk(b.dataset.on === '1'));
+    grid.appendChild(bulk);
+  }
 }
 
 function renderGenreGrid() {
@@ -628,6 +721,10 @@ function renderGenreGrid() {
   if(isEditMode) grid.classList.add('edit-mode');
   else grid.classList.remove('edit-mode');
 
+  const folder = FOLDERS.find(x => x.id === currentFolder);
+  if(!folder) { renderFolderList(grid); return; }
+  renderFolderHeader(grid, folder);
+
   const icons = ['🟤','🟢','🟠','🟣','🔴','🔵','🟡','🏢','📋','📖','🏛️','⚖️','🏗️','📜','💰','🗺️','📐','⚙️','🧰','📕','📗','📘'];
   // R8から始まる問題集は本アイコンで統一し、色違いで並べる
   const R8_BOOKS = ['📕','📗','📘','📙','📔','📓','📒'];
@@ -635,6 +732,7 @@ function renderGenreGrid() {
   const ordered = getOrderedGenres();
 
   ordered.forEach((g, orderIdx) => {
+    if(!folder.match(g)) return;
     const realIdx = genreOrder[orderIdx];
     const total = g.questions.length;
     const laps = (state._laps && state._laps[g.id]) || 0;
