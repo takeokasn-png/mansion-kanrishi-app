@@ -706,6 +706,9 @@ function renderGenreGrid() {
   else grid.classList.remove('edit-mode');
 
   const folder = FOLDERS.find(x => x.id === currentFolder);
+  // 合格実績表はフォルダ一覧（トップ）だけに表示
+  const stats = document.querySelector('.pass-stats');
+  if(stats) stats.style.display = folder ? 'none' : '';
   if(!folder) { renderFolderList(grid); return; }
   renderFolderHeader(grid, folder);
 
