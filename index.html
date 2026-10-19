@@ -662,34 +662,18 @@ function goFolderTop() {
   openFolder(null);
   showHome();
 }
-// ジャンルの今周の回答数・正解数（管業有なら免除問題を正解として数える）
-function genreCurStats(g) {
-  const curMap = {...((state._cur && state._cur[g.id]) || {})};
-  if(isKangyoOn(g)) g.questions.forEach((q, i) => { if(isExemptQ(g, q)) curMap[i] = true; });
-  const vals = Object.values(curMap);
-  return {answered: vals.length, correct: vals.filter(v => v === true).length};
-}
 function renderFolderList(grid) {
   FOLDERS.forEach(f => {
     const gs = GENRES.filter(f.match);
     if(!gs.length) return;
-    let qs = 0, ans = 0, ok = 0;
-    gs.forEach(g => { qs += g.questions.length; const st = genreCurStats(g); ans += st.answered; ok += st.correct; });
-    const pct = ans > 0 ? Math.round(ok / ans * 100) + '%' : '--';
-    const kt = gs.filter(isKangyoTarget);
-    const kOn = kt.filter(isKangyoOn).length;
-    const kLabel = kt.length ? `<span style="font-size:10px;font-weight:600;background:#fff3e0;color:#e65100;border-radius:6px;padding:1px 6px;margin-left:5px;">管業有 ${kOn}/${kt.length}</span>` : '';
+    const qs = gs.reduce((n, g) => n + g.questions.length, 0);
     const card = document.createElement('div');
     card.className = 'genre-card folder-card';
     card.innerHTML = `
       <div class="genre-icon" style="background:${f.color}20">${f.icon}</div>
       <div class="genre-info">
         <div class="genre-name">${f.name}</div>
-        <div class="genre-meta">${gs.length}冊・${qs.toLocaleString()}問${kLabel}</div>
-      </div>
-      <div class="genre-score genre-score2">
-        <span class="genre-score-label">正解率</span>
-        <div class="genre-score-row" style="color:${f.color}"><span class="lbl">今回</span>${pct}</div>
+        <div class="genre-meta">${gs.length}冊・${qs.toLocaleString()}問</div>
       </div>
       <div class="folder-arrow">›</div>`;
     card.onclick = () => openFolder(f.id);
@@ -1471,6 +1455,7 @@ applyDarkMode();
 // Init
 renderGenreGrid();
 updateReviewBadge();
+updateCountdown();
 
 if('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch(()=>{});
