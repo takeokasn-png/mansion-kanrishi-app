@@ -939,7 +939,8 @@ function showSessionLog() {
   if(n === 0) {
     list.innerHTML = '<div class="session-log-empty">まだ回答した問題がありません</div>';
   } else {
-    sessionLog.forEach(item => {
+    // 免除問題などが後から追加されても、常に問題番号順に並べる
+    [...sessionLog].sort((a, b) => a.num - b.num).forEach(item => {
       const div = document.createElement('div');
       div.className = 'session-log-item';
       const shortQ = item.q.replace(/\s+/g,' ').trim().slice(0, 55) + (item.q.length > 55 ? '…' : '');
