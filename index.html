@@ -157,6 +157,10 @@ body.dark-mode .kangyo-btn.on{background:#3a2a1a;border-color:#fb8c00;color:#ffb
 .review-check-btn.checked{background:#fff3e0;border-color:var(--orange);color:var(--orange);}
 
 .check-q-btn{width:100%;padding:13px;border:2px solid #90caf9;border-radius:12px;background:#e3f2fd;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:10px;color:#1565c0;}
+/* 回答後に問題を確認しているときの下部ボタン（解説画面と同じ3つを並べる） */
+.q-view-bar{position:fixed;left:0;right:0;bottom:0;z-index:90;margin:0 auto;max-width:500px;background:#fff;border-radius:22px 22px 0 0;padding:14px 20px calc(var(--safe-bottom)+16px);box-shadow:0 -8px 30px rgba(0,0,0,.18);}
+body.dark-mode .q-view-bar{background:#1e1e1e;}
+body.q-view-open .quiz-body{padding-bottom:calc(var(--safe-bottom) + 230px);}
 .back-to-result-btn{position:fixed;bottom:calc(var(--safe-bottom)+20px);left:50%;transform:translateX(-50%);z-index:90;padding:14px 32px;background:var(--primary);color:#fff;border:none;border-radius:40px;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.25);white-space:nowrap;}
 .next-btn{width:100%;padding:16px;background:var(--primary);color:#fff;border:none;border-radius:14px;font-size:16px;font-weight:700;cursor:pointer;}
 
@@ -343,7 +347,11 @@ body.dark-mode .kangyo-btn.on{background:#3a2a1a;border-color:#fb8c00;color:#ffb
     </div>
     <div class="choice-btns" id="choiceBtns" style="display:none;flex-direction:column;gap:10px;width:100%;max-width:500px;"></div>
   </div>
-  <button class="back-to-result-btn" id="backToResultBtn" onclick="toggleQuestionView()" style="display:none;">解説に戻る ▲</button>
+  <div class="q-view-bar" id="backToResultBtn" style="display:none;">
+    <button class="review-check-btn" id="reviewCheckBtn2" onclick="toggleReview()">☆ 復習リストに追加</button>
+    <button class="check-q-btn" onclick="toggleQuestionView()">解説を確認 ▲</button>
+    <button class="next-btn" id="nextBtn2" onclick="nextQuestion()">次の問題 →</button>
+  </div>
   <div class="result-overlay" id="resultOverlay">
     <div class="result-card">
       <div class="result-header">
@@ -1030,6 +1038,7 @@ function prevQuestion() {
   ro.classList.remove('show');
   ro.classList.remove('hide');
   document.getElementById('backToResultBtn').style.display = 'none';
+  document.body.classList.remove('q-view-open');
   renderQuestion();
 }
 
@@ -1041,6 +1050,7 @@ function nextQuestionNav() {
   ro.classList.remove('show');
   ro.classList.remove('hide');
   document.getElementById('backToResultBtn').style.display = 'none';
+  document.body.classList.remove('q-view-open');
   renderQuestion();
 }
 
@@ -1093,6 +1103,7 @@ function renderQuestion() {
   ro.classList.remove('show');
   ro.classList.remove('hide');
   document.getElementById('backToResultBtn').style.display = 'none';
+  document.body.classList.remove('q-view-open');
   updateRateIcon();
 
   // 過去周回の正誤履歴バッジ
@@ -1151,6 +1162,18 @@ function renderQuestion() {
   }
 }
 
+// 本試験で複数の肢が正解とされた問題（altAnswers）や正解なし（allCorrect）に対応
+function isCorrect4(q, n) {
+  return !!q.allCorrect || n === q.answer || (Array.isArray(q.altAnswers) && q.altAnswers.indexOf(n) >= 0);
+}
+function answerLabel4(q) {
+  if(q.allCorrect) return '正解: なし（本試験では全員正解の扱い）';
+  if(Array.isArray(q.altAnswers) && q.altAnswers.length) {
+    return `正解: ${[q.answer, ...q.altAnswers].join('又は')}（本試験ではいずれも正解の扱い）`;
+  }
+  return `正解: ${q.answer}. ${(q.choices && q.choices[String(q.answer)]) || ''}`;
+}
+
 function showResultOverlay(correct, q) {
   const badge = document.getElementById('resultBadge');
   const ansText = document.getElementById('resultAnswerText');
@@ -1162,7 +1185,7 @@ function showResultOverlay(correct, q) {
   badge.className = 'result-badge ' + (correct ? 'correct' : 'wrong');
 
   if(is4Choice()) {
-    ansText.textContent = `正解: ${q.answer}. ${q.choices[String(q.answer)] || ''}`;
+    ansText.textContent = answerLabel4(q);
     expl.innerHTML = linkifyLaw(q.explanation || '');
     expl.style.display = q.explanation ? 'block' : 'none';
   } else {
@@ -1187,6 +1210,15 @@ function toggleQuestionView() {
   const backBtn = document.getElementById('backToResultBtn');
   const isShowing = overlay.classList.toggle('hide');
   backBtn.style.display = isShowing ? 'block' : 'none';
+  document.body.classList.toggle('q-view-open', isShowing);
+  if(isShowing) syncQViewBar();
+}
+// 問題確認中の下部ボタンを解説画面のボタンと同じ表示にそろえる
+function syncQViewBar() {
+  const r1 = document.getElementById('reviewCheckBtn'), r2 = document.getElementById('reviewCheckBtn2');
+  const n1 = document.getElementById('nextBtn'), n2 = document.getElementById('nextBtn2');
+  if(r1 && r2) { r2.textContent = r1.textContent; r2.className = r1.className; }
+  if(n1 && n2) n2.textContent = n1.textContent;
 }
 
 function toggleReview() {
@@ -1208,6 +1240,8 @@ function toggleReview() {
       e: q.e || '',
       choices: q.choices || null,
       answer: q.answer || null,
+      allCorrect: !!q.allCorrect,
+      altAnswers: q.altAnswers || null,
       explanation: q.explanation || '',
     };
     state._review[rkey] = item;
@@ -1216,18 +1250,20 @@ function toggleReview() {
   }
   saveState();
   updateReviewBadge();
+  syncQViewBar();
 }
 
 function answer4(userAnswer) {
   if(qAnswered) return; // 回答済みなら再タップしても記録を変更しない
   qAnswered = true;
   const q = currentQuestions[currentQIdx];
-  const correct = userAnswer === q.answer;
+  // allCorrect: 本試験で「正解なし（全員正解）」とされた問題は、どの肢を選んでも正解
+  const correct = isCorrect4(q, userAnswer);
   const btns = document.getElementById('choiceBtns').querySelectorAll('.choice-btn');
   btns.forEach((btn, i) => {
     btn.disabled = true;
     const num = i + 1;
-    if(num === q.answer) btn.classList.add('correct');
+    if(q.allCorrect ? num === userAnswer : (num === q.answer || (correct && num === userAnswer))) btn.classList.add('correct');
     else if(num === userAnswer && !correct) btn.classList.add('wrong');
   });
 
@@ -1364,7 +1400,7 @@ function showReviewScreen() {
       const div = document.createElement('div');
       div.className = 'list-item';
       const ansLabel = item.choices
-        ? `正解: ${item.answer}. ${item.choices[String(item.answer)] || ''}`
+        ? answerLabel4(item)
         : `正解: ${item.a === true ? '○（正しい）' : '×（誤り）'}`;
       const explText = item.explanation || item.e || '';
       div.innerHTML = `
