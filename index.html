@@ -113,6 +113,20 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;bac
 .progress-bar-inner{height:100%;background:#ffd54f;transition:width .3s;}
 .quiz-body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:20px 16px calc(var(--safe-bottom)+20px);gap:16px;}
 .question-num{font-size:12px;color:var(--sub);font-weight:600;}
+/* 問題番号の行と文字サイズ切替（小・中・大） */
+.q-meta-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;width:100%;max-width:500px;}
+body.fs-2{--fs:1.18;}
+body.fs-3{--fs:1.38;}
+.fs-ctrl{margin-left:auto;display:inline-flex;align-items:center;gap:2px;background:#eceff7;border-radius:999px;padding:3px;}
+.fs-lbl{font-size:11px;color:var(--sub);font-weight:600;padding:0 6px 0 8px;}
+.fs-opt{border:none;background:transparent;color:#5c6bc0;font-weight:700;border-radius:999px;cursor:pointer;line-height:1;padding:6px 9px;-webkit-tap-highlight-color:transparent;}
+.fs-opt[data-fs="1"]{font-size:11px;}
+.fs-opt[data-fs="2"]{font-size:13px;}
+.fs-opt[data-fs="3"]{font-size:15px;}
+.fs-opt.on{background:var(--primary);color:#fff;}
+body.dark-mode .fs-ctrl{background:#2a2a2a;}
+body.dark-mode .fs-opt{color:#9fa8da;}
+.fs-ctrl-result{display:flex;width:max-content;margin:0 0 6px auto;}
 .lap-badge{font-size:10px;font-weight:700;border-radius:5px;padding:1px 5px;white-space:nowrap;}
 .lap-badge.ok{background:#e8f5e9;color:#2e7d32;}
 .lap-badge.ng{background:#fce4ec;color:#c62828;}
@@ -131,7 +145,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;bac
 body.dark-mode .kangyo-btn{background:#2a2a2a;border-color:#555;color:#aaa;}
 body.dark-mode .kangyo-btn.on{background:#3a2a1a;border-color:#fb8c00;color:#ffb74d;}
 .question-card{background:#fff;border-radius:20px;padding:28px 22px;box-shadow:0 4px 20px rgba(0,0,0,.1);width:100%;max-width:500px;}
-.question-text{font-size:17px;line-height:1.7;font-weight:500;color:var(--text);}
+.question-text{font-size:calc(17px * var(--fs,1));line-height:1.7;font-weight:500;color:var(--text);}
 .answer-btns{display:flex;gap:14px;width:100%;max-width:500px;}
 .ans-btn{flex:1;padding:18px;border:none;border-radius:16px;font-size:26px;font-weight:700;cursor:pointer;transition:transform .1s,opacity .2s;box-shadow:0 4px 14px rgba(0,0,0,.15);}
 .ans-btn:disabled{opacity:.5;cursor:default;}
@@ -149,8 +163,8 @@ body.dark-mode .kangyo-btn.on{background:#3a2a1a;border-color:#fb8c00;color:#ffb
 .result-badge{display:inline-block;border-radius:12px;padding:8px 24px;font-size:20px;font-weight:700;margin-bottom:8px;}
 .result-badge.correct{background:#e8f5e9;color:var(--green);}
 .result-badge.wrong{background:#ffebee;color:var(--red);}
-.result-explanation{font-size:14px;line-height:1.7;color:#333;background:#f5f5f5;border-radius:12px;padding:14px;margin-bottom:12px;white-space:pre-line;overflow-y:auto;flex:1 1 auto;min-height:0;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;}
-.result-answer-text{font-size:13px;color:var(--sub);text-align:center;margin-bottom:10px;}
+.result-explanation{font-size:calc(14px * var(--fs,1));line-height:1.7;color:#333;background:#f5f5f5;border-radius:12px;padding:14px;margin-bottom:12px;white-space:pre-line;overflow-y:auto;flex:1 1 auto;min-height:0;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;}
+.result-answer-text{font-size:calc(13px * var(--fs,1));color:var(--sub);text-align:center;margin-bottom:10px;}
 
 /* 復習チェックボタン */
 .review-check-btn{width:100%;padding:13px;border:2px solid #e0e0e0;border-radius:12px;background:#fff;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:10px;transition:all .15s;color:#555;}
@@ -234,7 +248,7 @@ body.q-view-open .quiz-body{padding-bottom:calc(var(--safe-bottom) + 230px);}
 .review-start-btn{background:var(--orange);color:#fff;border:none;border-radius:10px;padding:10px 20px;font-size:14px;font-weight:700;cursor:pointer;}
 
 /* ===== 4択ボタン ===== */
-.choice-btn{width:100%;padding:14px 16px;border:2px solid #e0e0e0;border-radius:14px;background:#fff;font-size:14px;line-height:1.5;text-align:left;cursor:pointer;transition:all .15s;box-shadow:0 2px 6px rgba(0,0,0,.06);}
+.choice-btn{width:100%;padding:14px 16px;border:2px solid #e0e0e0;border-radius:14px;background:#fff;font-size:calc(14px * var(--fs,1));line-height:1.5;text-align:left;cursor:pointer;transition:all .15s;box-shadow:0 2px 6px rgba(0,0,0,.06);}
 .choice-btn:active{transform:scale(.98);}
 .choice-btn.correct{background:#e8f5e9;border-color:var(--green);color:var(--green);}
 .choice-btn.wrong{background:#ffebee;border-color:var(--red);color:var(--red);}
@@ -280,16 +294,17 @@ body.q-view-open .quiz-body{padding-bottom:calc(var(--safe-bottom) + 230px);}
   .quiz-body{padding:28px 32px calc(var(--safe-bottom)+28px);gap:20px;}
   .question-card,.answer-btns,#choiceBtns{max-width:960px !important;}
   .question-card{padding:32px 36px;}
-  .question-text{font-size:19px;line-height:1.8;}
-  .choice-btn{font-size:16px;padding:16px 20px;}
+  .question-text{font-size:calc(19px * var(--fs,1));line-height:1.8;}
+  .choice-btn{font-size:calc(16px * var(--fs,1));padding:16px 20px;}
   .choice-btn:hover:not(:disabled){border-color:#9fa8da;}
   .quiz-title{font-size:17px;}
   /* 解説：画面中央のウィンドウとして大きく表示 */
   .result-overlay{align-items:center;padding:32px;}
   .result-card{max-width:960px;border-radius:24px;padding:28px 32px 24px;max-height:calc(100vh - 64px);max-height:calc(100dvh - 64px);}
-  .result-explanation{font-size:15.5px;line-height:1.85;padding:18px 20px;}
-  .result-answer-text{font-size:14px;}
+  .result-explanation{font-size:calc(15.5px * var(--fs,1));line-height:1.85;padding:18px 20px;}
+  .result-answer-text{font-size:calc(14px * var(--fs,1));}
   .q-view-bar{max-width:960px;}
+  .q-meta-row{max-width:960px;}
   body.q-view-open .quiz-body{padding-bottom:calc(var(--safe-bottom) + 250px);}
   /* 回答一覧・各種リスト */
   .session-log-overlay{align-items:center;}
@@ -373,9 +388,10 @@ body.q-view-open .quiz-body{padding-bottom:calc(var(--safe-bottom) + 230px);}
   </div>
   <div class="progress-bar-wrap"><div class="progress-bar-inner" id="progressBar"></div></div>
   <div class="quiz-body">
-    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+    <div class="q-meta-row">
       <div class="question-num" id="questionNum"></div>
       <div id="lapHistory" style="display:flex;gap:4px;flex-wrap:wrap;"></div>
+      <div class="fs-ctrl" aria-label="文字の大きさ"><span class="fs-lbl">文字</span><button class="fs-opt" data-fs="1" onclick="setFontSize(1)">小</button><button class="fs-opt" data-fs="2" onclick="setFontSize(2)">中</button><button class="fs-opt" data-fs="3" onclick="setFontSize(3)">大</button></div>
     </div>
     <div class="question-card"><div class="question-text" id="questionText"></div></div>
     <div class="answer-btns" id="answerBtns">
@@ -392,6 +408,7 @@ body.q-view-open .quiz-body{padding-bottom:calc(var(--safe-bottom) + 230px);}
   <div class="result-overlay" id="resultOverlay">
     <div class="result-card">
       <div class="result-header">
+        <div class="fs-ctrl fs-ctrl-result" aria-label="文字の大きさ"><span class="fs-lbl">文字</span><button class="fs-opt" data-fs="1" onclick="setFontSize(1)">小</button><button class="fs-opt" data-fs="2" onclick="setFontSize(2)">中</button><button class="fs-opt" data-fs="3" onclick="setFontSize(3)">大</button></div>
         <div class="result-badge" id="resultBadge"></div>
         <div class="result-answer-text" id="resultAnswerText"></div>
       </div>
@@ -1250,6 +1267,14 @@ function toggleQuestionView() {
   document.body.classList.toggle('q-view-open', isShowing);
   if(isShowing) syncQViewBar();
 }
+// 問題文・選択肢・解説の文字サイズ（1=小, 2=中, 3=大）。端末ごとに記憶する
+function setFontSize(n) {
+  n = [1,2,3].indexOf(n) >= 0 ? n : 1;
+  document.body.classList.remove('fs-2','fs-3');
+  if(n > 1) document.body.classList.add('fs-' + n);
+  document.querySelectorAll('.fs-opt').forEach(b => b.classList.toggle('on', Number(b.dataset.fs) === n));
+  try { localStorage.setItem('mgr_font_size', String(n)); } catch(e) {}
+}
 // 問題確認中の下部ボタンを解説画面のボタンと同じ表示にそろえる
 function syncQViewBar() {
   const r1 = document.getElementById('reviewCheckBtn'), r2 = document.getElementById('reviewCheckBtn2');
@@ -1528,6 +1553,7 @@ function toggleDarkMode() {
   applyDarkMode();
 }
 applyDarkMode();
+try { setFontSize(Number(localStorage.getItem('mgr_font_size')) || 1); } catch(e) { setFontSize(1); }
 
 // Init
 renderGenreGrid();

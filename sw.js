@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mansionkanrishi-v73';
+const CACHE_NAME = 'mansionkanrishi-v74';
 const ASSETS = [
   '/mansion-kanrishi-app/',
   '/mansion-kanrishi-app/index.html',
@@ -20,8 +20,17 @@ self.addEventListener('activate', e => {
   self.clients.claim();
 });
 
+// 通信できるときは常に最新のファイルを取りに行き（取れたらキャッシュも更新）、
+// 圏外などで取れないときだけキャッシュを使う
 self.addEventListener('fetch', e => {
+  if(e.request.method !== 'GET') return;
   e.respondWith(
-    caches.match(e.request).then(r => r || fetch(e.request))
+    fetch(e.request, {cache: 'no-cache'}).then(res => {
+      if(res && res.ok && new URL(e.request.url).origin === location.origin) {
+        const copy = res.clone();
+        caches.open(CACHE_NAME).then(c => c.put(e.request, copy));
+      }
+      return res;
+    }).catch(() => caches.match(e.request).then(r => r || caches.match('/mansion-kanrishi-app/index.html')))
   );
 });
