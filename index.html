@@ -113,6 +113,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;bac
 .progress-bar-inner{height:100%;background:#ffd54f;transition:width .3s;}
 .quiz-body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:20px 16px calc(var(--safe-bottom)+20px);gap:16px;}
 .question-num{font-size:12px;color:var(--sub);font-weight:600;}
+/* 「ア〜エ」形式の問題文 */
+.question-text .q-lead{white-space:pre-line;font-weight:600;}
+.q-items-hint{font-size:11px;color:var(--sub);font-weight:400;margin:10px 0 6px;}
+.q-items{display:flex;flex-direction:column;gap:8px;}
+.q-item{display:flex;gap:10px;align-items:flex-start;background:#f6f7fb;border:1.5px solid #e6e8f2;border-radius:12px;padding:10px 12px;font-weight:400;line-height:1.65;}
+.q-item-text{flex:1;min-width:0;}
+.q-mark{flex-shrink:0;min-width:34px;height:30px;border-radius:9px;border:1.5px solid #9fa8da;background:#fff;color:var(--primary);font-weight:800;font-size:calc(13px * var(--fs,1));cursor:pointer;padding:0 6px;-webkit-tap-highlight-color:transparent;}
+.q-item.marked-ok{background:#e8f5e9;border-color:#a5d6a7;}
+.q-item.marked-ok .q-mark{background:var(--green);border-color:var(--green);color:#fff;}
+.q-item.marked-ng{background:#ffebee;border-color:#ef9a9a;}
+.q-item.marked-ng .q-mark{background:var(--red);border-color:var(--red);color:#fff;}
+body.dark-mode .q-item{background:#262626;border-color:#3a3a3a;}
+body.dark-mode .q-mark{background:#1e1e1e;color:#9fa8da;}
 /* 問題番号の行と文字サイズ切替（小・中・大） */
 .q-meta-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;width:100%;max-width:500px;}
 body.fs-2{--fs:1.18;}
@@ -145,7 +158,7 @@ body.dark-mode .fs-opt{color:#9fa8da;}
 body.dark-mode .kangyo-btn{background:#2a2a2a;border-color:#555;color:#aaa;}
 body.dark-mode .kangyo-btn.on{background:#3a2a1a;border-color:#fb8c00;color:#ffb74d;}
 .question-card{background:#fff;border-radius:20px;padding:28px 22px;box-shadow:0 4px 20px rgba(0,0,0,.1);width:100%;max-width:500px;}
-.question-text{font-size:calc(17px * var(--fs,1));line-height:1.7;font-weight:500;color:var(--text);}
+.question-text{font-size:calc(14px * var(--fs,1));line-height:1.7;font-weight:500;color:var(--text);}
 .answer-btns{display:flex;gap:14px;width:100%;max-width:500px;}
 .ans-btn{flex:1;padding:18px;border:none;border-radius:16px;font-size:26px;font-weight:700;cursor:pointer;transition:transform .1s,opacity .2s;box-shadow:0 4px 14px rgba(0,0,0,.15);}
 .ans-btn:disabled{opacity:.5;cursor:default;}
@@ -294,7 +307,7 @@ body.q-view-open .quiz-body{padding-bottom:calc(var(--safe-bottom) + 230px);}
   .quiz-body{padding:28px 32px calc(var(--safe-bottom)+28px);gap:20px;}
   .question-card,.answer-btns,#choiceBtns{max-width:960px !important;}
   .question-card{padding:32px 36px;}
-  .question-text{font-size:calc(19px * var(--fs,1));line-height:1.8;}
+  .question-text{font-size:calc(16px * var(--fs,1));line-height:1.8;}
   .choice-btn{font-size:calc(16px * var(--fs,1));padding:16px 20px;}
   .choice-btn:hover:not(:disabled){border-color:#9fa8da;}
   .quiz-title{font-size:17px;}
@@ -1143,13 +1156,40 @@ function getCurrentKey() {
   return genKey(g.id, q.origIdx);
 }
 
+// 「ア〜エ」形式の問題文を、リード文＋1項目ずつのブロックに分けて表示する。
+// 各項目の記号（ア・イ…）をタップすると ○ → × → なし の順にメモできる（問題を移ると消える）
+function renderQuestionText(el, qtext) {
+  const formatted = qtext.replace(/(^|[。」）\n])\s*([アイウエオ])[ 　]+(?!〕)/g, '$1\n$2 ');
+  const lines = formatted.split('\n');
+  const lead = [], items = [];
+  lines.forEach(line => {
+    const m = line.match(/^([アイウエオ]) (.*)$/);
+    if(m) items.push({k: m[1], t: m[2].trim()});
+    else if(items.length) items[items.length - 1].t += line;   // 項目の途中で改行されていた場合
+    else lead.push(line);
+  });
+  if(items.length < 2) { el.innerText = formatted.trim(); return; }
+  const esc = t => t.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  el.innerHTML = `<div class="q-lead">${esc(lead.join('\n').trim())}</div>`
+    + `<div class="q-items-hint">記号をタップすると ○ / × をメモできます</div>`
+    + `<div class="q-items">` + items.map(it =>
+        `<div class="q-item"><button type="button" class="q-mark" data-k="${it.k}">${it.k}</button><div class="q-item-text">${esc(it.t)}</div></div>`
+      ).join('') + `</div>`;
+  el.querySelectorAll('.q-mark').forEach(b => b.addEventListener('click', () => {
+    const next = {'': 'ok', ok: 'ng', ng: ''}[b.dataset.m || ''];
+    b.dataset.m = next;
+    b.textContent = b.dataset.k + (next === 'ok' ? '○' : next === 'ng' ? '×' : '');
+    b.closest('.q-item').classList.toggle('marked-ok', next === 'ok');
+    b.closest('.q-item').classList.toggle('marked-ng', next === 'ng');
+  }));
+}
+
 function renderQuestion() {
   const total = currentQuestions.length;
   const q = currentQuestions[currentQIdx];
   const qEl = document.getElementById('questionText');
   const qtext = (q && q.q) ? q.q : '';
-  const formatted = qtext.replace(/\s*([アイウエオ])\s+/g, '\n$1 ');
-  qEl.innerText = formatted;
+  renderQuestionText(qEl, qtext);
   document.getElementById('questionNum').textContent = `第 ${currentQIdx+1} 問`;
   document.getElementById('quizCounter').textContent = `${currentQIdx+1}/${total}`;
   document.getElementById('progressBar').style.width = `${(currentQIdx/total)*100}%`;
@@ -1269,11 +1309,11 @@ function toggleQuestionView() {
 }
 // 問題文・選択肢・解説の文字サイズ（1=小, 2=中, 3=大）。端末ごとに記憶する
 function setFontSize(n) {
-  n = [1,2,3].indexOf(n) >= 0 ? n : 1;
+  n = [1,2,3].indexOf(n) >= 0 ? n : 2;
   document.body.classList.remove('fs-2','fs-3');
   if(n > 1) document.body.classList.add('fs-' + n);
   document.querySelectorAll('.fs-opt').forEach(b => b.classList.toggle('on', Number(b.dataset.fs) === n));
-  try { localStorage.setItem('mgr_font_size', String(n)); } catch(e) {}
+  try { localStorage.setItem('mgr_font_size2', String(n)); } catch(e) {}
 }
 // 問題確認中の下部ボタンを解説画面のボタンと同じ表示にそろえる
 function syncQViewBar() {
@@ -1553,7 +1593,8 @@ function toggleDarkMode() {
   applyDarkMode();
 }
 applyDarkMode();
-try { setFontSize(Number(localStorage.getItem('mgr_font_size')) || 1); } catch(e) { setFontSize(1); }
+// 問題文を選択肢と同じ大きさ（＝小）にそろえたため、最初の表示は「中」を標準にする
+try { setFontSize(Number(localStorage.getItem('mgr_font_size2')) || 2); } catch(e) { setFontSize(2); }
 
 // Init
 renderGenreGrid();
