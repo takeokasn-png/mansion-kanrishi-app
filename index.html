@@ -101,6 +101,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;bac
 .genre-score2{display:flex;flex-direction:column;gap:3px;min-width:58px;}
 .genre-score-row{display:flex;align-items:baseline;justify-content:space-between;gap:6px;font-size:12px;font-weight:700;line-height:1.2;}
 .genre-score-row .lbl{font-size:9px;font-weight:400;color:#999;}
+.genre-score-row .dt{font-size:9px;font-weight:600;color:#9e9e9e;white-space:nowrap;margin-right:auto;padding-right:4px;}
+.genre-score-row .pc{min-width:32px;text-align:right;}
 .genre-score-row.prev{color:#9e9e9e;font-size:11px;}
 
 /* ===== QUIZ ===== */
@@ -774,6 +776,31 @@ function renderFolderHeader(grid, folder) {
   }
 }
 
+// ===== 周回を解き終わった日付（R○年○月○日） =====
+function todayISO() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+function fmtWareki(iso) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || '');
+  if(!m) return '';
+  return `R${Number(m[1]) - 2018}年${Number(m[2])}月${Number(m[3])}日`;
+}
+function markLapDone(gid, lapNum) {
+  if(!state._lapDates) state._lapDates = {};
+  if(!state._lapDates[gid]) state._lapDates[gid] = {};
+  if(!state._lapDates[gid][lapNum]) state._lapDates[gid][lapNum] = todayISO();
+}
+// 今周の全問（管業免除を含む）に回答し終えたら、その日付を記録する
+function checkLapComplete(g) {
+  const cur = (state._cur && state._cur[g.id]) || {};
+  const done = g.questions.every((q, i) => (i in cur) || (isKangyoOn(g) && isExemptQ(g, q)));
+  if(done) markLapDone(g.id, (state._laps && state._laps[g.id]) || 0);
+}
+function lapDateOf(gid, lapNum) {
+  return fmtWareki(state._lapDates && state._lapDates[gid] && state._lapDates[gid][lapNum]);
+}
+
 function renderGenreGrid() {
   const grid = document.getElementById('genreGrid');
   grid.innerHTML = '';
@@ -813,6 +840,8 @@ function renderGenreGrid() {
       });
     }
     const prevPct = prevAns > 0 ? Math.round(prevOk / prevAns * 100) + '%' : '--';
+    const prevDate = laps > 0 ? lapDateOf(g.id, laps - 1) : '';
+    const curDate = answered >= total ? lapDateOf(g.id, laps) : '';
     const savedSess = (state._session && state._session[g.id]) || null;
     const pos = (savedSess && typeof savedSess.qIdx === 'number' && savedSess.qIdx >= 0 && savedSess.qIdx < total)
       ? savedSess.qIdx + 1 : 1;
@@ -842,8 +871,8 @@ function renderGenreGrid() {
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
         <div class="genre-score genre-score2">
           <span class="genre-score-label">正解率</span>
-          <div class="genre-score-row prev"><span class="lbl">前回</span>${prevPct}</div>
-          <div class="genre-score-row" style="color:${ballColor}"><span class="lbl">今回</span>${answered>0?pct+'%':'--'}</div>
+          <div class="genre-score-row prev">${prevDate ? `<span class="dt">${prevDate}</span>` : ''}<span class="lbl">前回</span><span class="pc">${prevPct}</span></div>
+          <div class="genre-score-row" style="color:${ballColor}">${curDate ? `<span class="dt">${curDate}</span>` : ''}<span class="lbl">今回</span><span class="pc">${answered>0?pct+'%':'--'}</span></div>
         </div>
         ${isEditMode ? `<button class="lap-reset-btn" title="周回リセット">↺ リセット</button>` : ''}
       </div>
@@ -862,6 +891,7 @@ function renderGenreGrid() {
         if(state._cur) delete state._cur[g.id];
         if(state._session) delete state._session[g.id];
         if(state._history) delete state._history[g.id];
+        if(state._lapDates) delete state._lapDates[g.id];
         saveState();
         renderGenreGrid();
       });
@@ -1389,6 +1419,7 @@ function answer4(userAnswer) {
     } else {
       if(state._wrong) delete state._wrong[key];
     }
+    checkLapComplete(g);
     saveState();
   }
   showResultOverlay(correct, q);
@@ -1421,6 +1452,7 @@ function answer(userAnswer) {
     } else {
       if(state._wrong) delete state._wrong[key];
     }
+    checkLapComplete(g);
     saveState();
   }
   showResultOverlay(correct, q);
@@ -1431,6 +1463,7 @@ function nextQuestion() {
   if(isLast) {
     if(!isReviewMode) {
       const gid = GENRES[currentGenreIdx].id;
+      markLapDone(gid, (state._laps && state._laps[gid]) || 0);
       if(!state._session) state._session = {};
       delete state._session[gid];
       if(!state._laps) state._laps = {};
