@@ -197,7 +197,7 @@ body.q-view-open .quiz-body{padding-bottom:calc(var(--safe-bottom) + 230px);}
 #resultScreen{background:linear-gradient(160deg,#1a237e,#283593);}
 .result-screen-body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:calc(var(--safe-top)+20px) 20px calc(var(--safe-bottom)+20px);gap:20px;}
 .result-circle{width:160px;height:160px;border-radius:50%;background:rgba(255,255,255,.1);border:4px solid #ffd54f;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;}
-.result-pct{font-size:48px;font-weight:700;}
+.result-pct{font-size:40px;font-weight:700;letter-spacing:-1px;}
 .result-label{font-size:14px;opacity:.8;}
 .result-genre-name{font-size:18px;font-weight:700;color:#fff;text-align:center;}
 .result-stats{display:flex;gap:16px;}
@@ -441,7 +441,7 @@ body.q-view-open .quiz-body{padding-bottom:calc(var(--safe-bottom) + 230px);}
     <div class="result-genre-name" id="finalGenreName"></div>
     <div class="result-circle" id="resultCircle">
       <div class="result-pct" id="finalPct"></div>
-      <div class="result-label">正解率（タップで一覧）</div>
+      <div class="result-label">正解数（タップで一覧）</div>
     </div>
     <div class="result-stats">
       <div class="stat-box"><div class="stat-num" id="finalCorrect"></div><div class="stat-lbl">正解</div></div>
@@ -839,7 +839,7 @@ function renderGenreGrid() {
         if(v === true || v === false) { prevAns++; if(v) prevOk++; }
       });
     }
-    const prevPct = prevAns > 0 ? Math.round(prevOk / prevAns * 100) + '%' : '--';
+    const prevPct = prevAns > 0 ? `${prevOk}/${total}` : '--';
     const prevDate = laps > 0 ? lapDateOf(g.id, laps - 1) : '';
     const curDate = answered >= total ? lapDateOf(g.id, laps) : '';
     const savedSess = (state._session && state._session[g.id]) || null;
@@ -870,9 +870,9 @@ function renderGenreGrid() {
       </div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
         <div class="genre-score genre-score2">
-          <span class="genre-score-label">正解率</span>
+          <span class="genre-score-label">正解数</span>
           <div class="genre-score-row prev">${prevDate ? `<span class="dt">${prevDate}</span>` : ''}<span class="lbl">前回</span><span class="pc">${prevPct}</span></div>
-          <div class="genre-score-row" style="color:${ballColor}">${curDate ? `<span class="dt">${curDate}</span>` : ''}<span class="lbl">今回</span><span class="pc">${answered>0?pct+'%':'--'}</span></div>
+          <div class="genre-score-row" style="color:${ballColor}">${curDate ? `<span class="dt">${curDate}</span>` : ''}<span class="lbl">今回</span><span class="pc">${answered>0?`${correct}/${total}`:'--'}</span></div>
         </div>
         ${isEditMode ? `<button class="lap-reset-btn" title="周回リセット">↺ リセット</button>` : ''}
       </div>
@@ -1023,7 +1023,7 @@ function updateRateIcon() {
   if(!el) return;
   const n = sessionLog.length;
   const ok = sessionLog.filter(x => x.correct).length;
-  el.textContent = n ? Math.round(ok / n * 100) + '%' : '—';
+  el.textContent = n ? `${ok}/${currentQuestions.length}` : '—';
 }
 
 function showSessionLog() {
@@ -1034,12 +1034,11 @@ function showSessionLog() {
   const n = sessionLog.length;
   const ok = sessionLog.filter(x => x.correct).length;
   const ng = n - ok;
-  const pct = n ? Math.round(ok / n * 100) : 0;
   overlay.querySelector('.session-log-card').classList.toggle('editing', sessionLogEditing);
   document.getElementById('sessionLogEditBtn').textContent = sessionLogEditing ? '完了' : '編集';
   document.getElementById('sessionLogEditBtn').classList.toggle('on', sessionLogEditing);
   title.textContent = `回答一覧（${n}問）`;
-  summary.innerHTML = `<span>正解 <b>${ok}</b></span><span>不正解 <b>${ng}</b></span><span>正解率 <b>${pct}%</b></span>`;
+  summary.innerHTML = `<span>正解 <b>${ok}</b></span><span>不正解 <b>${ng}</b></span><span>正解数 <b>${ok}/${currentQuestions.length}</b></span>`;
   list.innerHTML = '';
   if(n === 0) {
     list.innerHTML = '<div class="session-log-empty">まだ回答した問題がありません</div>';
@@ -1484,7 +1483,7 @@ function showResult() {
   const pct = Math.round(sessionCorrect / total * 100);
   const name = isReviewMode ? '復習問題' : GENRES[currentGenreIdx].name;
   document.getElementById('finalGenreName').textContent = name;
-  document.getElementById('finalPct').textContent = pct + '%';
+  document.getElementById('finalPct').textContent = `${sessionCorrect}/${total}`;
   document.getElementById('finalCorrect').textContent = sessionCorrect;
   document.getElementById('finalWrong').textContent = sessionWrong;
   document.getElementById('finalTotal').textContent = total;
