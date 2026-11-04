@@ -111,6 +111,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;bac
 .back-btn{background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:10px;padding:8px 14px;font-size:14px;cursor:pointer;}
 .quiz-title{font-size:15px;font-weight:700;flex:1;text-align:center;}
 .quiz-counter{font-size:13px;opacity:.8;}
+.quiz-prog{display:flex;flex-direction:column;align-items:flex-end;gap:3px;}
+.quiz-prog-row{display:flex;align-items:center;gap:6px;}
+.pass-line{font-size:11px;font-weight:700;color:#ffd54f;white-space:nowrap;line-height:1;}
 .progress-bar-wrap{background:#3949ab;height:4px;}
 .progress-bar-inner{height:100%;background:#ffd54f;transition:width .3s;}
 .quiz-body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:20px 16px calc(var(--safe-bottom)+20px);gap:16px;}
@@ -391,10 +394,15 @@ body.q-view-open .quiz-body{padding-bottom:calc(var(--safe-bottom) + 230px);}
     <button class="back-btn" onclick="showHome()">＜ 戻る</button>
     <div class="quiz-title" id="quizTitle"></div>
     <div style="display:flex;align-items:center;gap:6px;">
-      <div class="quiz-counter" id="quizCounter"></div>
-      <div class="rate-icon" id="rateIcon" onclick="showSessionLog()">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h2v8H3v-8zm4-6h2v14H7V7zm4 3h2v11h-2V10zm4-7h2v18h-2V3zm4 10h2v8h-2v-8z"/></svg>
-        <span id="rateIconPct">—</span>
+      <div class="quiz-prog">
+        <div class="quiz-prog-row">
+          <div class="quiz-counter" id="quizCounter"></div>
+          <div class="rate-icon" id="rateIcon" onclick="showSessionLog()">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h2v8H3v-8zm4-6h2v14H7V7zm4 3h2v11h-2V10zm4-7h2v18h-2V3zm4 10h2v8h-2v-8z"/></svg>
+            <span id="rateIconPct">—</span>
+          </div>
+        </div>
+        <div class="pass-line" id="passLine" style="display:none"></div>
       </div>
       <button class="back-btn" onclick="prevQuestion()" style="font-size:11px;padding:5px 9px;opacity:.85;">前へ</button>
       <button class="back-btn" onclick="nextQuestionNav()" style="font-size:11px;padding:5px 9px;opacity:.85;">次へ</button>
@@ -1187,6 +1195,20 @@ function getCurrentKey() {
 
 // 「ア〜エ」形式の問題文を、リード文＋1項目ずつのブロックに分けて表示する。
 // 各項目の記号（ア・イ…）をタップすると ○ → × → なし の順にメモできる（問題を移ると消える）
+// 合格点（過去問は本試験の合格点、R8年度問題集は各模試・答練の合格点）
+const PASS_SCORE = {
+  r7_kakomon:42, r6_kakomon:37, r5_kakomon:36, r4_kakomon:40, r3_kakomon:38, r2_kakomon:36, r1_kakomon:37,
+  r8_challenge:38, r8_tac_chokuzen1:38, r8_tac_chokuzen_dai2:37, r8_lec_moshi1:35,
+};
+function updatePassLine() {
+  const el = document.getElementById('passLine');
+  if(!el) return;
+  const g = (!isReviewMode && currentGenreIdx >= 0) ? GENRES[currentGenreIdx] : null;
+  const sc = g && PASS_SCORE[g.id];
+  el.style.display = sc ? 'block' : 'none';
+  el.textContent = sc ? `合格点 ${sc}点` : '';
+}
+
 function renderQuestionText(el, qtext) {
   const formatted = qtext.replace(/(^|[。」）\n])\s*([アイウエオ])[ 　]+(?!〕)/g, '$1\n$2 ');
   const lines = formatted.split('\n');
@@ -1221,6 +1243,7 @@ function renderQuestion() {
   renderQuestionText(qEl, qtext);
   document.getElementById('questionNum').textContent = `第 ${currentQIdx+1} 問`;
   document.getElementById('quizCounter').textContent = `${currentQIdx+1}/${total}`;
+  updatePassLine();
   document.getElementById('progressBar').style.width = `${(currentQIdx/total)*100}%`;
   const ro = document.getElementById('resultOverlay');
   ro.classList.remove('show');
