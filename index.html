@@ -211,6 +211,13 @@ body.q-view-open .quiz-body{padding-bottom:calc(var(--safe-bottom) + 230px);}
 .result-btns button{padding:16px;border:none;border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;}
 .btn-retry{background:#ffd54f;color:#1a237e;}
 .btn-home{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3)!important;}
+.final-comment{display:none;width:100%;max-width:460px;background:rgba(255,255,255,.95);border-radius:18px;padding:16px 18px;text-align:center;box-shadow:0 6px 24px rgba(0,0,0,.25);animation:fcPop .45s cubic-bezier(.2,1.4,.4,1);}
+.final-comment.show{display:block;}
+.final-comment .fc-head{font-size:13px;font-weight:700;margin-bottom:6px;}
+.final-comment .fc-text{font-size:16px;font-weight:700;line-height:1.6;color:#222;}
+@keyframes fcPop{from{transform:scale(.6);opacity:0;}to{transform:scale(1);opacity:1;}}
+body.dark-mode .final-comment{background:#2a2a2a;}
+body.dark-mode .final-comment .fc-text{color:#eee;}
 
 .result-circle{cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:rgba(255,255,255,.2);}
 .result-circle:active{opacity:.8;}
@@ -451,6 +458,7 @@ body.q-view-open .quiz-body{padding-bottom:calc(var(--safe-bottom) + 230px);}
       <div class="result-pct" id="finalPct"></div>
       <div class="result-label">正解数（タップで一覧）</div>
     </div>
+    <div class="final-comment" id="finalComment"><div class="fc-head" id="finalCommentHead"></div><div class="fc-text" id="finalCommentText"></div></div>
     <div class="result-stats">
       <div class="stat-box"><div class="stat-num" id="finalCorrect"></div><div class="stat-lbl">正解</div></div>
       <div class="stat-box"><div class="stat-num" id="finalWrong"></div><div class="stat-lbl">不正解</div></div>
@@ -1485,8 +1493,10 @@ function answer(userAnswer) {
 function nextQuestion() {
   const isLast = currentQIdx === currentQuestions.length - 1;
   if(isLast) {
+    lapEndInfo = null;
     if(!isReviewMode) {
       const gid = GENRES[currentGenreIdx].id;
+      lapEndInfo = buildLapEndInfo(GENRES[currentGenreIdx]);
       markLapDone(gid, (state._laps && state._laps[gid]) || 0);
       if(!state._session) state._session = {};
       delete state._session[gid];
@@ -1512,7 +1522,103 @@ function showResult() {
   document.getElementById('finalCorrect').textContent = sessionCorrect;
   document.getElementById('finalWrong').textContent = sessionWrong;
   document.getElementById('finalTotal').textContent = total;
+  renderLapEndComment();
   showScreen('resultScreen');
+}
+
+// 50問をすべて解き終えたときだけ、点数に応じた一言を結果画面に出す
+// （途中で結果画面に来た場合・30問の答練・一問一答では出さない）
+let lapEndInfo = null;
+const LAP_END_COMMENTS = {
+  perfect: {head: '🏆 満点！！', color: '#F9A825', list: [
+    '満点！？試験委員が泣いて逃げ出すレベルです。もう問題を作る側に回ってください。',
+    '50/50…人間じゃない、六法全書が服を着て歩いてる。',
+    'パーフェクト！今日はもう勉強禁止。ケーキを食べて寝なさい。これは命令です。',
+    '全問正解って。区分所有法の方からあなたに会いに来るレベル。',
+    '満点です。先生はもう教えることがないので、明日から代わりに授業してください。',
+  ]},
+  pass: {head: '🎉 合格点クリア！', color: '#2E7D32', list: [
+    '合格点クリア！この調子なら本番も余裕です。',
+    '合格ライン突破！マンション管理士の風格がにじみ出てきています。',
+    'やるじゃん！今日の自分を、ちょっと抱きしめてあげていいよ。',
+    '合格点超え！全国の管理組合があなたの登場を待っています。',
+    'お見事！…ただし調子に乗って明日サボったら全部パーだよ。わかってるよね？',
+    '合格点クリア！この点数、本番まで冷凍保存しておきたいですね。',
+    '合格です！今夜のごはんは、いつもより少しだけ美味しいはず。',
+    '文句なしの合格点。本番の試験官の皆さん、この人をよろしくお願いします。',
+    'ナイス！合格点を取る自分に、そろそろ慣れてきましたか？',
+    '合格点超え！ただし本番は今日ほど優しくないかもしれません。油断は禁物です。',
+  ]},
+  close: {head: '😣 あと少し！', color: '#E65100', list: [
+    'あと{gap}点！惜しい、本当に惜しい。その{gap}点、間違えた問題の中に落ちてるよ。',
+    '合格まであと一歩。ここで諦めたら試合終了ですよ…と誰かが言っていました。',
+    '惜しい！合格点はもう見えてる。手を伸ばせば届く距離です。',
+    'あと{gap}点。悔しいでしょ？その悔しさを、解説を読む燃料にしよう。',
+    'いい線いってる！復習リストを片付けたら、次は合格点の向こう側へ。',
+    'あと{gap}点。その差は、たぶん問題文の「ただし書き」に隠れています。',
+    '惜しすぎる！合格点の方も「もうちょっとだったのに」と言っています。',
+    '実力はほぼ合格圏。あとはケアレスミスを減らすだけです。',
+    'あと{gap}点で合格。本番でその{gap}点を取らせてくれるのは、今日の復習です。',
+    'ここまで来たら、あとは知識の細かい詰めだけ。間違えた問題をもう一度解いてみよう。',
+  ]},
+  low30: {head: '📚 勉強が足りていません', color: '#C62828', list: [
+    '{score}点…正直に言います、勉強が足りていません。テキストを開いている時間より、スマホを見ている時間の方が長くない？',
+    'このままだと本番、問題文を読んでいるうちに試験が終わるよ。',
+    '合格点まであと{gap}点。遠い。東京から大阪まで歩いて行くくらい遠い。',
+    '基礎からやり直しです。テキストを枕にしても、寝ている間には覚えられません。',
+    '伸びしろしかない！…と前向きに言ってみたけど、本当に伸ばさないとダメだよ。',
+    '{score}点…合格点の背中は、まだ遠くに小さく見えているだけです。',
+    '正直、今のままだと本番は運頼みです。あなたの人生、運に預けますか？',
+    '「なんとなく」で選んでいませんか？根拠を言えるようになるまで覚えましょう。',
+    '合格点まであと{gap}点。毎日コツコツやれば届く距離です。サボれば一生届きません。',
+    '今日の点数は忘れていい。ただし、間違えた問題は絶対に忘れないでください。',
+  ]},
+  low20: {head: '😑 やる気ある？', color: '#6A1B9A', list: [
+    '{score}点…やる気ある？ちょっと胸に手を当てて考えてみて。',
+    '4択だよ？鉛筆を転がしても12〜13点は取れるんだよ？',
+    'これ、問題集を開いたまま寝てた？寝言で回答した？',
+    '試験日まであと何日か知ってる？カレンダーを見てから出直しておいで。',
+    '先生、怒ってないよ。呆れてるだけです。',
+  ]},
+  low10: {head: '💀 人間失格', color: '#212121', list: [
+    '{score}点…人間失格。太宰もびっくりです。',
+    'もう会場に来なくていいよ。受験料は焼肉に使いなさい。',
+    '4択で適当に選んでもこれより取れるんだよ。逆に、どうやったらこの点が取れるの？才能？',
+    'この点数、管理組合に知られたら理事長から勧告書が届くよ。',
+    'おめでとう！全国最下位候補にノミネートされました。…嘘だと言って。',
+  ]},
+};
+function buildLapEndInfo(g) {
+  const pass = PASS_SCORE[g.id];
+  if(!pass || g.questions.length !== 50) return null;
+  const cur = (state._cur && state._cur[g.id]) || {};
+  const kangyo = isKangyoOn(g);
+  let score = 0;
+  for(let i = 0; i < g.questions.length; i++) {
+    const exempt = kangyo && isExemptQ(g, g.questions[i]);
+    if(!(i in cur) && !exempt) return null; // 未回答があれば出さない
+    if(cur[i] === true || (exempt && !(i in cur))) score++;
+  }
+  const cat = score === 50 ? 'perfect' : score >= pass ? 'pass'
+    : score <= 10 ? 'low10' : score <= 20 ? 'low20' : score <= 30 ? 'low30' : 'close';
+  const c = LAP_END_COMMENTS[cat];
+  const text = c.list[Math.floor(Math.random() * c.list.length)]
+    .replace(/\{score\}/g, score).replace(/\{gap\}/g, Math.max(pass - score, 0));
+  return {score, pass, head: c.head, color: c.color, text};
+}
+function renderLapEndComment() {
+  const box = document.getElementById('finalComment');
+  if(!box) return;
+  const info = lapEndInfo;
+  lapEndInfo = null;
+  box.classList.remove('show');
+  if(!info) return;
+  const head = document.getElementById('finalCommentHead');
+  head.textContent = `${info.head}　${info.score}点／合格点 ${info.pass}点`;
+  head.style.color = info.color;
+  document.getElementById('finalCommentText').textContent = info.text;
+  void box.offsetWidth; // アニメーションを毎回再生
+  box.classList.add('show');
 }
 
 function retryQuiz() {
