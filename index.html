@@ -864,6 +864,8 @@ function renderGenreGrid() {
       : `<div class="genre-icon" style="background:${g.color}20">${r8Ids.indexOf(g.id) >= 0 ? R8_BOOKS[r8Ids.indexOf(g.id) % R8_BOOKS.length] : (icons[realIdx] || '📌')}</div>`;
     const hasProgress = laps > 0 || answered > 0;
     const lapLabel = hasProgress ? `<span style="font-size:10px;font-weight:600;background:${ballColor}22;color:${ballColor};border-radius:6px;padding:1px 6px;margin-left:5px;">${laps + 1}周目</span>` : '';
+    const passSc = PASS_SCORE[g.id];
+    const passLabel = passSc ? `<span style="font-size:10px;font-weight:600;color:#888;margin-left:6px;">合格点 ${passSc}点</span>` : '';
     const card = document.createElement('div');
     card.className = 'genre-card';
     card.draggable = isEditMode;
@@ -873,7 +875,7 @@ function renderGenreGrid() {
       ${kakomonIconHtml}
       <div class="genre-info">
         <div class="genre-name">${g.name}</div>
-        <div class="genre-meta">${pos}/${total}問目${lapLabel}</div>
+        <div class="genre-meta">${pos}/${total}問目${lapLabel}${passLabel}</div>
         <div class="genre-progress"><div class="genre-progress-bar" style="width:${(pos-1)/total*100}%;background:#3949ab"></div></div>
       </div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
