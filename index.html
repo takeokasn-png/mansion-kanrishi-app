@@ -897,7 +897,7 @@ function renderGenreGrid() {
       <div class="drag-handle">☰</div>
       ${kakomonIconHtml}
       <div class="genre-info">
-        <div class="genre-name">${g.name}</div>
+        <div class="genre-name">${g.name.replace(/\s*（\d+問）$/, '')}</div>
         <div class="genre-meta">${pos}/${total}問目${lapLabel}${passLabel}</div>
         <div class="genre-progress"><div class="genre-progress-bar" style="width:${(pos-1)/total*100}%;background:#3949ab"></div></div>
       </div>
