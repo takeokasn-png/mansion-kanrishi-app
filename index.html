@@ -673,19 +673,46 @@ function markExemptCorrect(g, origIdx) {
   if(!state._history[g.id][origIdx]) state._history[g.id][origIdx] = [];
   state._history[g.id][origIdx][lapNum] = true;
 }
-// 今の出題順（currentQuestions）の免除問題を回答一覧・記録に反映
-function syncExemptForSession(g) {
-  if(!isKangyoOn(g)) return;
-  currentQuestions.forEach((q, idx) => {
-    if(!isExemptQ(g, q)) return;
-    markExemptCorrect(g, q.origIdx);
-    const num = idx + 1;
-    const entry = {num, correct: true, q: q.q, choice: '免'};
-    const i = sessionLog.findIndex(x => x.num === num);
-    if(i >= 0) sessionLog[i] = entry; else sessionLog.push(entry);
-  });
+// 免除問題は、その問題まで進んで表示した時点で1問ずつ正解扱いにする（解く前からまとめて加点しない）
+function creditExemptQ(g, idx) {
+  const q = currentQuestions[idx];
+  if(!isKangyoOn(g) || !isExemptQ(g, q)) return;
+  markExemptCorrect(g, q.origIdx);
+  const num = idx + 1;
+  const entry = {num, correct: true, q: q.q, choice: '免'};
+  const i = sessionLog.findIndex(x => x.num === num);
+  if(i >= 0) sessionLog[i] = entry; else sessionLog.push(entry);
   sessionCorrect = sessionLog.filter(x => x.correct).length;
   sessionWrong = sessionLog.length - sessionCorrect;
+  saveState();
+}
+// 旧仕様（管業「有」にした時点で問46〜50をまとめて正解扱い）で付いた、まだ到達していない免除問題の加点を外す
+function migrateKangyoPrecredit() {
+  if(state._kangyoMig1) return;
+  Object.keys(state._kangyo || {}).forEach(gid => {
+    const g = GENRES.find(x => x.id === gid);
+    if(!isKangyoTarget(g)) return;
+    const cur = state._cur && state._cur[gid];
+    const lapNum = (state._laps && state._laps[gid]) || 0;
+    const sess = state._session && state._session[gid];
+    const unCredit = i => {
+      if(cur) delete cur[i];
+      const h = state._history && state._history[gid] && state._history[gid][i];
+      if(h && h.length > lapNum) { h.length = lapNum; if(h.length === 0) delete state._history[gid][i]; }
+    };
+    if(sess && Array.isArray(sess.order)) {
+      const reached = typeof sess.qIdx === 'number' ? sess.qIdx : -1;
+      sess.order.forEach((origIdx, pos) => {
+        if(!isExemptQ(g, g.questions[origIdx]) || pos <= reached) return;
+        const k = Array.isArray(sess.log) ? sess.log.findIndex(x => x.num === pos + 1 && x.choice === '免') : -1;
+        if(k >= 0) sess.log.splice(k, 1);
+        if(k >= 0 || !sess.log || !sess.log.some(x => x.num === pos + 1)) unCredit(origIdx);
+      });
+    } else if(cur && Object.keys(cur).length && Object.keys(cur).every(i => isExemptQ(g, g.questions[i]))) {
+      Object.keys(cur).forEach(i => unCredit(Number(i)));
+    }
+  });
+  state._kangyoMig1 = true;
   saveState();
 }
 function toggleKangyo(gid) {
@@ -706,19 +733,8 @@ function setKangyo(gid, on) {
   if(!state._kangyo) state._kangyo = {};
   if(!!state._kangyo[gid] === on) return;
   if(on) {
+    // 加点は免除問題まで進んだときに1問ずつ行う（creditExemptQ）
     state._kangyo[gid] = true;
-    g.questions.forEach((q, i) => { if(isExemptQ(g, q)) markExemptCorrect(g, i); });
-    // 途中の周があれば回答一覧にも反映
-    const sess = state._session && state._session[gid];
-    if(sess && Array.isArray(sess.order) && Array.isArray(sess.log)) {
-      sess.order.forEach((origIdx, idx) => {
-        const q = g.questions[origIdx];
-        if(!isExemptQ(g, q)) return;
-        const entry = {num: idx + 1, correct: true, q: q.q, choice: '免'};
-        const k = sess.log.findIndex(x => x.num === idx + 1);
-        if(k >= 0) sess.log[k] = entry; else sess.log.push(entry);
-      });
-    }
   } else {
     delete state._kangyo[gid];
     // 免除で正解扱いにしていた問題を未回答に戻す
@@ -843,7 +859,6 @@ function renderGenreGrid() {
     const laps = (state._laps && state._laps[g.id]) || 0;
     const curMap = {...((state._cur && state._cur[g.id]) || {})};
     const kangyoOn = isKangyoOn(g);
-    if(kangyoOn) g.questions.forEach((q, i) => { if(isExemptQ(g, q)) curMap[i] = true; });
     const answered = Object.keys(curMap).length;
     const correct = Object.values(curMap).filter(v => v === true).length;
     const pct = answered > 0 ? Math.round(correct / answered * 100) : 0;
@@ -1023,7 +1038,6 @@ function startQuiz(genreIdx) {
   }
   sessionCorrect = sessionLog.filter(x => x.correct).length;
   sessionWrong = sessionLog.length - sessionCorrect;
-  syncExemptForSession(g);
   document.getElementById('quizTitle').textContent = g.name;
   showScreen('quizScreen');
   renderQuestion();
@@ -1300,7 +1314,7 @@ function renderQuestion() {
   if(!isReviewMode && currentGenreIdx >= 0) {
     const g = GENRES[currentGenreIdx];
     if(isKangyoOn(g) && isExemptQ(g, q)) {
-      syncExemptForSession(g);
+      creditExemptQ(g, currentQIdx);
       updateRateIcon();
       qAnswered = true;
       document.querySelectorAll('#choiceBtns .choice-btn').forEach((btn, i) => {
@@ -1760,6 +1774,7 @@ applyDarkMode();
 try { setFontSize(Number(localStorage.getItem('mgr_font_size2')) || 2); } catch(e) { setFontSize(2); }
 
 // Init
+migrateKangyoPrecredit();
 renderGenreGrid();
 updateReviewBadge();
 updateCountdown();
