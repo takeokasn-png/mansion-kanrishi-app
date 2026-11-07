@@ -276,6 +276,10 @@ body.dark-mode .final-comment .fc-text{color:#eee;}
 .wrong-group[open]>summary .wg-arrow{transform:rotate(90deg);}
 .wrong-group-body{display:flex;flex-direction:column;gap:8px;padding:0 10px 12px;}
 .wrong-group-body .list-item{box-shadow:none;border:1px solid #eee;}
+.list-item-q .q-lead{white-space:pre-line;}
+.list-item-q .q-items-hint{display:none;}
+.list-item-q .q-items{margin-top:8px;gap:6px;}
+.list-item-q .q-item{padding:8px 10px;}
 .list-item-num{display:inline-block;font-size:12px;font-weight:700;color:#fff;border-radius:6px;padding:1px 8px;margin-bottom:6px;}
 body.dark-mode .wrong-group{background:#1e1e1e;}
 body.dark-mode .wrong-group>summary{color:#e0e0e0;}
@@ -1692,10 +1696,12 @@ function showWrongList() {
         div.className = 'list-item';
         div.innerHTML = `
           <span class="list-item-num" style="background:${color}">問${num}</span>
-          <div class="list-item-q">${item.q}</div>
+          <div class="list-item-q"></div>
           <div class="list-item-a">正解: ${item.a === true ? '○（正しい）' : item.a === false ? '×（誤り）' : item.a}</div>
           <div class="list-item-e">${linkifyLaw(item.e)}</div>
         `;
+        // ア〜エ形式は問題画面と同じく1項目ずつブロックに分けて表示
+        renderQuestionText(div.querySelector('.list-item-q'), item.q || '');
         body.appendChild(div);
       });
       list.appendChild(det);
