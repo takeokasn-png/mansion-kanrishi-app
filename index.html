@@ -1263,11 +1263,11 @@ function updatePassLine() {
 
 function renderQuestionText(el, qtext, opts) {
   const memo = !(opts && opts.memo === false);
-  const formatted = qtext.replace(/(^|[。」）\n])\s*([アイウエオ])[ 　]+(?!〕)/g, '$1\n$2 ');
+  const formatted = qtext.replace(/(^|[。」）\n])\s*([アイウエオカキク])[ 　]+(?!〕)/g, '$1\n$2 ');
   const lines = formatted.split('\n');
   const lead = [], items = [];
   lines.forEach(line => {
-    const m = line.match(/^([アイウエオ]) (.*)$/);
+    const m = line.match(/^([アイウエオカキク]) (.*)$/);
     if(m) items.push({k: m[1], t: m[2].trim()});
     else if(items.length) items[items.length - 1].t += line;   // 項目の途中で改行されていた場合
     else lead.push(line);
