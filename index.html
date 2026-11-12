@@ -274,6 +274,8 @@ body.dark-mode .list-item-a{color:#90caf9;}
 .wrong-group>summary .genre-icon{width:36px;height:36px;border-radius:10px;font-size:17px;}
 .wrong-group>summary .wg-name{flex:1;}
 .wrong-group>summary .wg-count{font-size:12px;font-weight:700;color:#fff;background:var(--red);border-radius:10px;padding:2px 9px;}
+.wrong-group>summary .wg-solve{flex-shrink:0;background:var(--orange);color:#fff;border:none;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;}
+.wrong-note{font-size:12px;color:var(--sub);margin:0 2px 4px;line-height:1.6;}
 .wrong-group>summary .wg-arrow{font-size:12px;color:var(--sub);transition:transform .2s;}
 .wrong-group[open]>summary .wg-arrow{transform:rotate(90deg);}
 .wrong-group-body{display:flex;flex-direction:column;gap:8px;padding:0 10px 12px;}
@@ -553,6 +555,7 @@ let sessionWrong = 0;
 let sessionLog = [];
 let sessionLogEditing = false; // 回答一覧の編集モード
 let isReviewMode = false;
+let wrongQuizGid = null; // 間違い一覧の「まとめて解く」で出題中の問題集（復習リストからの出題中は null）
 let qAnswered = false; // 現在の問題に回答済みか（回答後の再タップによる上書き防止）
 
 function loadState() {
@@ -1213,6 +1216,7 @@ function nextQuestionNav() {
 function startReviewQuiz() {
   const revItems = Object.values(getReviewList());
   if(revItems.length === 0) return;
+  wrongQuizGid = null;
   isReviewMode = true;
   currentGenreIdx = -1;
   currentQuestions = revItems.map((item, i) => ({...item, origIdx: i}));
@@ -1561,7 +1565,7 @@ function nextQuestion() {
 function showResult() {
   const total = currentQuestions.length;
   const pct = Math.round(sessionCorrect / total * 100);
-  const name = isReviewMode ? '復習問題' : GENRES[currentGenreIdx].name;
+  const name = isReviewMode ? (wrongQuizGid ? document.getElementById('quizTitle').textContent : '復習問題') : GENRES[currentGenreIdx].name;
   document.getElementById('finalGenreName').textContent = name;
   document.getElementById('finalPct').textContent = `${sessionCorrect}/${total}`;
   document.getElementById('finalCorrect').textContent = sessionCorrect;
@@ -1667,25 +1671,74 @@ function renderLapEndComment() {
 }
 
 function retryQuiz() {
-  if(isReviewMode) startReviewQuiz();
+  if(isReviewMode && wrongQuizGid) startWrongQuiz(wrongQuizGid);
+  else if(isReviewMode) startReviewQuiz();
   else startQuiz(currentGenreIdx);
+}
+
+// 間違い一覧：各問題集で直近に全問解き終えた周（最新の完了周）で不正解だった問題
+// 途中の周の回答や、それより前の周の不正解は含めない。まだ1周も完了していない問題集は対象外
+function latestLapWrongs() {
+  const out = {};
+  GENRES.forEach(g => {
+    const laps = (state._laps && state._laps[g.id]) || 0;
+    if(!laps) return;
+    const hist = (state._history && state._history[g.id]) || {};
+    const idxs = [];
+    g.questions.forEach((q, i) => { const h = hist[i]; if(h && h[laps - 1] === false) idxs.push(i); });
+    if(idxs.length) out[g.id] = idxs;
+  });
+  return out;
+}
+// 間違い一覧の1問を、復習モードで出題できる形にする（復習リストの項目と同じ形）
+function wrongQuizItem(g, i) {
+  const q = g.questions[i];
+  return g.type === '4choice'
+    ? {_revKey: genKey(g.id, i), q: q.q, choices: q.choices, answer: q.answer, allCorrect: !!q.allCorrect,
+       altAnswers: q.altAnswers || null, explanation: q.explanation || '', num: q.num}
+    : {_revKey: genKey(g.id, i), q: q.q, a: q.a, e: q.e || '', num: q.num};
+}
+function startWrongQuiz(gid) {
+  const g = GENRES.find(x => x.id === gid);
+  const idxs = latestLapWrongs()[gid];
+  if(!g || !idxs || !idxs.length) return;
+  wrongQuizGid = gid;
+  isReviewMode = true;
+  currentGenreIdx = -1;
+  currentQuestions = idxs.map((i, n) => ({...wrongQuizItem(g, i), origIdx: n}));
+  currentQIdx = 0;
+  sessionCorrect = 0;
+  sessionWrong = 0;
+  sessionLog = [];
+  document.getElementById('quizTitle').textContent = '間違い一覧：' + g.name.replace(/\s*（\d+問）$/, '');
+  showScreen('quizScreen');
+  renderQuestion();
 }
 
 function showWrongList() {
   const list = document.getElementById('wrongList');
   list.innerHTML = '';
-  const wrongs = state._wrong || {};
-  const items = Object.values(wrongs);
-  if(items.length === 0) {
-    list.innerHTML = '<div style="text-align:center;padding:40px;color:#999;font-size:15px;">まだ間違えた問題はありません</div>';
-  } else {
-    // 問題集ごとにまとめ、フォルダ（過去問・R8年度問題集・一問一答）→問題集の並び→問題番号順に表示
-    const groups = {};
-    Object.entries(wrongs).forEach(([key, item]) => {
-      const gid = item.gid || key.slice(0, key.lastIndexOf('_'));
-      const origIdx = Number(key.slice(key.lastIndexOf('_') + 1));
-      (groups[gid] = groups[gid] || []).push({item, origIdx});
+  // 各問題集の直近に完了した周の不正解だけを表示する
+  const lw = latestLapWrongs();
+  const groups = {};
+  Object.entries(lw).forEach(([gid, idxs]) => {
+    const g = GENRES.find(x => x.id === gid);
+    groups[gid] = idxs.map(i => {
+      const q = g.questions[i];
+      const item = g.type === '4choice'
+        ? {q: q.q, a: '選択肢' + q.answer, e: (q.choices && q.choices[String(q.answer)]) || ''}
+        : {q: q.q, a: q.a, e: q.e};
+      return {item, origIdx: i};
     });
+  });
+  if(Object.keys(groups).length === 0) {
+    list.innerHTML = '<div style="text-align:center;padding:40px;color:#999;font-size:15px;line-height:1.8;">表示できる間違えた問題はありません<br><span style="font-size:13px;">問題集を全問解き終えると、その周で間違えた問題がここに表示されます</span></div>';
+  } else {
+    const note = document.createElement('div');
+    note.className = 'wrong-note';
+    note.textContent = '各問題集で、直近に全問解き終えた周で間違えた問題を表示しています。';
+    list.appendChild(note);
+    // 問題集ごとにまとめ、フォルダ（過去問・R8年度問題集・一問一答）→問題集の並び→問題番号順に表示
     let openSet = {};
     try { openSet = JSON.parse(localStorage.getItem('mgr_wrong_open')) || {}; } catch(e) {}
     const saveOpen = () => { try { localStorage.setItem('mgr_wrong_open', JSON.stringify(openSet)); } catch(e) {} };
@@ -1699,8 +1752,10 @@ function showWrongList() {
       det.className = 'wrong-group';
       det.open = !!openSet[gid];
       const icon = g ? genreIconHtml(g) : `<div class="genre-icon" style="background:#9e9e9e20">📌</div>`;
-      det.innerHTML = `<summary>${icon}<span class="wg-name">${name}</span><span class="wg-count">${arr.length}問</span><span class="wg-arrow">▶</span></summary><div class="wrong-group-body"></div>`;
+      det.innerHTML = `<summary>${icon}<span class="wg-name">${name}</span><span class="wg-count">${arr.length}問</span>${g ? '<button type="button" class="wg-solve">まとめて解く</button>' : ''}<span class="wg-arrow">▶</span></summary><div class="wrong-group-body"></div>`;
       det.addEventListener('toggle', () => { if(det.open) openSet[gid] = 1; else delete openSet[gid]; saveOpen(); });
+      const solveBtn = det.querySelector('.wg-solve');
+      if(solveBtn) solveBtn.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); startWrongQuiz(gid); });
       const body = det.querySelector('.wrong-group-body');
       arr.forEach(({item, origIdx}) => {
         const q = g && g.questions[origIdx];
